@@ -1,0 +1,36 @@
+#include "Character.h"
+#include <iostream>
+
+Character::Character(Rectangle Body,  const char* name){
+  this->body = Body;
+  this->x = Body.x;
+  this->y = Body.y;
+  this-> name = name;
+}
+
+void Character::setSpeed(float newSpeed){
+  this->speed = newSpeed;
+}
+
+void Character::draw(){
+  //Check for position change
+  if(IsKeyDown(KEY_D))
+    body.x = body.x+(speed*GetFrameTime());
+  if(IsKeyDown(KEY_A))
+    body.x = body.x-(speed*GetFrameTime());
+  if(IsKeyDown(KEY_W))
+    body.y = body.y-(speed*GetFrameTime());
+  if(IsKeyDown(KEY_S))
+    body.y = body.y+(speed*GetFrameTime());
+
+  //Draw Character
+  DrawRectanglePro(body, Vector2{0,0},0.0f,BLACK);
+}
+
+float Character::getX(){
+  return body.x;
+}
+
+float Character::getY(){
+  return body.y;
+}

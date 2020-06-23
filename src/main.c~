@@ -1,0 +1,100 @@
+#include "raylib.h"
+#include <iostream> //Mostly for debugging
+#include <list>
+#include "Button.h"
+#include "Character.h"
+
+bool loadMainMenu = true;
+bool GameOver = false;
+
+const int screenWidth = 800; //try to move back into main() 
+const int screenHeight = 450;
+
+void MainMenu();
+void GameLogic(std::list<Rectangle>& sceneElements, std::list<Character>& unitList);
+void GameDraw(std::list<Rectangle>& sceneElements, std::list<Character>& unitList);
+void EndScreen();
+
+int main(void)
+{
+  // Initialization: Camera, TODO: Make fullscreen, implement camera tracking via mouse, Build scene elements (map), make building class
+  InitWindow(screenWidth, screenHeight, "Simple Game");
+  SetTargetFPS(144); // Set FPS
+
+  Camera2D camera;
+  camera.offset = {screenWidth/2, screenHeight/2 };
+  camera.rotation = 0.0f;
+  camera.zoom = 1.0f;
+  
+  std::list<Rectangle> sceneElements;
+  std::list<Character> unitList;
+  
+    
+  // Main game loop
+  while (!WindowShouldClose())    // Detect window close button or ESC key
+    {
+      if(loadMainMenu == true){
+	MainMenu(); //ideally scene elements pulled from a data file accessible in MM, hardcoded for now
+      }
+      else if(GameOver == false){
+	GameLogic(sceneElements, unitList);
+	GameDraw(sceneElements, unitList);
+      }
+      else{
+	EndScreen();
+      }
+    }
+  CloseWindow();
+
+  return 0;
+}
+
+void MainMenu(){
+  // Create Menu Items
+  Button start ("start",screenWidth/2-100,screenHeight/2-50,200,100,Vector2{0,0},0.0f);
+
+  // Logic
+  if(start.isMouseClick())
+    loadMainMenu = false;
+
+  // Display Menu items
+  BeginDrawing();
+  ClearBackground(RAYWHITE);
+  start.Draw();
+  EndDrawing();
+}
+
+void GameLogic(std::list<Rectangle>& sceneElements, std::list<Character>& unitList){
+  // Run calculations and update positions (and existence) of objects
+  // Make a Player (Testing Purposes)
+  Rectangle pBody = {20,20,50,100};
+  Character player (pBody,"Player 1");
+  unitList.push_back(player);
+
+  //Add Border
+  Rectangle Border{0,0,1000,1000};
+  sceneElements.push_front(Border);
+
+}
+
+void GameDraw(std::list<Rectangle>& sceneElements, std::list<Character>& unitList){
+  // Draw all RELEVANT objects
+  
+  BeginDrawing();
+  ClearBackground(RAYWHITE);
+  //Draw Scene elements
+  DrawRectangleLinesEx(sceneElements.front(), 5, BLACK); 
+  
+  //Draw all Unite
+  for(Character currUnit : unitList){
+    currUnit.draw();
+  }
+  //Draw all Buildings
+  
+  EndDrawing();
+}
+
+void EndScreen(){
+  //Report Final Score and redirect to Main Menu
+}
+

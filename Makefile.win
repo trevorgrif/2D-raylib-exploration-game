@@ -1,0 +1,33 @@
+
+APPNAME=test
+
+LDFLAGS:=-L c:/raylib/raylib/src -lm -lraylib  -pthread -lopengl32 -lgdi32 -lwinmm
+
+CFLAGS:= -g -Wfatal-errors -pedantic -Wall -Wextra -Werror
+CFLAGS+= -std=c99 -I ./include -I ../raylib/src
+
+SRC:=$(wildcard src/*.c)
+OBJ:=$(SRC:src/%.c=obj/%.o)
+INC:=$(wildcard include/*.h)
+
+CC=gcc
+
+$(APPNAME): $(OBJ)
+	$(CC) $(OBJ) -o $(APPNAME) $(LDFLAGS)
+
+$(OBJ): obj/%.o : src/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+.PHONY: debug release
+debug: CFLAGS+= -g
+release: CFLAGS+= -O3
+
+debug release: clean $(APPNAME)
+
+.PHONY:	clean
+clean:
+	del obj\*
+	del $(APPNAME)
+
+style: $(SRC) $(INC)
+	astyle -A10 -s4 -S -p -xg -j -z2 -n src/* include/*
