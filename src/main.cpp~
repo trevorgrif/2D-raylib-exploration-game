@@ -3,6 +3,7 @@
 #include <list>
 #include "Button.h"
 #include "Character.h"
+#include "LinkedList.h"
 
 bool loadMainMenu = true;
 bool GameOver = false;
@@ -21,8 +22,6 @@ void EndScreen();
 // Helper Functions
 void CameraUpdate(Camera2D& Camera);
 void InitializeMap(std::list<Rectangle>& buildList);
-
-
 
 int main(void)
 {
@@ -48,6 +47,13 @@ int main(void)
   Rectangle pBody2 = {80,20,50,100};
   Character player2 (pBody2,"Player 2",camera);
   unitList.push_back(player2);
+
+  // Testing LinkedList
+  LinkedList<int> testList;
+  LinkedList<int>::node n1{1,"First Node",NULL};
+  LinkedList<int>::nodeptr n1ptr = &n1;
+  testList.addFront(n1ptr);
+  testList.printNames();
     
   // Main game loop
   while (!WindowShouldClose())    // Detect window close button or ESC key

@@ -3,11 +3,11 @@ APPNAME:=$(shell basename `pwd`)
 
 LDFLAGS:=-L ../raylib/src -lm -lraylib -lX11 -ldl -pthread
 
-CFLAGS:= -g -Wfatal-errors -pedantic -Wall -Wextra -Werror
+CFLAGS:= -g -Wfatal-errors -pedantic -Wall -Wextra
 CFLAGS+= -I ./include -I ../raylib/src
 
-SRC:=$(wildcard src/*.c)
-OBJ:=$(SRC:src/%.c=obj/%.o)
+SRC:=$(wildcard src/*.cpp)
+OBJ:=$(SRC:src/%.cpp=obj/%.o)
 INC:=$(wildcard include/*.h)
 
 CC=g++
@@ -15,7 +15,7 @@ CC=g++
 $(APPNAME): $(OBJ)
 	$(CC) $(OBJ) -o $(APPNAME) $(LDFLAGS)
 
-$(OBJ): obj/%.o : src/%.c
+$(OBJ): obj/%.o : src/%.cpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: debug release

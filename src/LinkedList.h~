@@ -1,0 +1,25 @@
+#ifndef LINKEDLIST_H
+#define LINKEDLIST_H
+
+template <typename T>
+class LinkedList{
+ public:
+  struct node{T object; const char* name; struct node* nextNode;};
+  typedef struct node node;
+  typedef node* nodeptr;
+ private:
+  nodeptr frontptr;
+  int listSize{0};
+  
+ public: //Methods to make: addBack, addFront, getNode, delBack, delFront, delNode, printNames
+  LinkedList();
+
+  void addFront(nodeptr newnodeptr);
+  void addBack(nodeptr newnodeptr);
+  void printNames();
+ 
+  
+  
+};
+
+#endif //LINKED_LIST

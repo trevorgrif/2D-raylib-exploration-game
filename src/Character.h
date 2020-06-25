@@ -10,18 +10,18 @@ class Character{
   int x;
   int y;
   const char * name;
-  Camera2D camera;
+  Camera2D* camera;
   bool CameraFocus{true};
   bool isSelected{false};
   bool isMoving{false};
   
  public:
-  Character(Rectangle Body, const char * name, Camera2D& camera);
+  Character(Rectangle Body, const char * name, Camera2D* camera);
 
   void setSpeed(float newSpeed);
   void draw();
-  void updatePos(Camera2D& camera);
-  void updateStatus(Camera2D& camera);
+  void updatePos(Camera2D* camera);
+  void updateStatus(Camera2D* camera);
   void moveToPoint(int x,int y);
   float getX();
   float getY();
