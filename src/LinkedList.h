@@ -10,7 +10,7 @@ class LinkedList{
   typedef Node<T> node_type;
   typedef node_type* node_ptr;
   
-  node_ptr front_ptr = new node_type (front_ptr->data,front_ptr->name);
+  node_ptr front_ptr;
   int listSize{0};
   int ID;
   
@@ -51,7 +51,7 @@ void LinkedList<T>::addtoFront(node_ptr newnodeptr){
     front_ptr->next = nullptr;
   }
   else{
-    node_ptr temp = new node_type(newnodeptr->data,newnodeptr->name);
+    node_ptr temp = new node_type;
     temp = front_ptr;
     front_ptr = newnodeptr;
     front_ptr->next = temp;
@@ -67,12 +67,13 @@ void LinkedList<T>::addtoBack(node_ptr newnodeptr){
     front_ptr->next = nullptr;
   }
   else{
-    node_ptr temp = new node_type (front_ptr->data,front_ptr->name);
+    node_ptr temp = new node_type;
     temp = front_ptr;
     for(int i = 1; i < listSize; i++){
       temp = temp->next;
     }
     temp->next = newnodeptr;
+    newnodeptr->next = nullptr;
   }
   listSize++;
 }
@@ -83,7 +84,7 @@ void LinkedList<T>::printNames(){
   node_ptr temp;
   temp = front_ptr;
   for(int i = 1; i <= listSize; i++){
-    std::cout << temp->name << std::endl;
+    std::cout << temp->name << " X value: " << temp->data.getX() << std::endl;
     temp = temp->next;
   }
 }
@@ -97,11 +98,13 @@ void LinkedList<T>::printIDs(){
     std::cout << temp->ID << std::endl;
     temp = temp->next;
   }
+  if(temp->next == nullptr)
+    std::cout << "NULL\n";
 }
 
 template <typename T>
 void LinkedList<T>::delFront(){
-  node_ptr prev = new node_type (front_ptr->data, front_ptr->name);
+  node_ptr prev = new node_type;
   if(front_ptr == nullptr){return;}
   else{
     prev = front_ptr;
@@ -113,11 +116,10 @@ void LinkedList<T>::delFront(){
 
 template <typename T>
 void LinkedList<T>::delBack(){
-  std::cout << "DEBUG\n";
   if(front_ptr == nullptr){return;}
   else{
-    node_ptr temp = new node_type(front_ptr->data,front_ptr->name);
-    node_ptr prev = new node_type(front_ptr->data, front_ptr->name);
+    node_ptr temp = new node_type;
+    node_ptr prev = new node_type;
     temp = front_ptr;
     for(int i=1; i <= listSize; i++){
       prev = temp;
@@ -134,8 +136,8 @@ void LinkedList<T>::delID(int ID){
   bool found{false};
   if(front_ptr == nullptr){return;}
   else{
-    node_ptr temp = new node_type(front_ptr->data,front_ptr->name);
-    node_ptr prev = new node_type(front_ptr->data, front_ptr->name);
+    node_ptr temp = new node_type;
+    node_ptr prev = new node_type;
     temp = front_ptr;
     prev = temp;
     if(front_ptr->ID == ID){delFront();}
@@ -160,7 +162,7 @@ template <typename T>
 Node<T>* LinkedList<T>::getNodebyID(int ID){
   if(front_ptr == nullptr){return 0;}
   else{
-    node_ptr temp = new node_type(front_ptr->data,front_ptr->name);
+    node_ptr temp = new node_type;
     temp = front_ptr;
     while(temp->next != nullptr){
       if(temp->ID == ID){
@@ -177,7 +179,7 @@ int LinkedList<T>::size(){return listSize;}
 
 template <typename T>
 Node<T>* LinkedList<T>::getNodei(int i){
-  node_ptr temp = new node_type(front_ptr->data,front_ptr->name);
+  node_ptr temp = new node_type;
   temp = front_ptr;
   for(int j = 1; j < i; j++){
     temp = temp->next;

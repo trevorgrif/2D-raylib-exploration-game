@@ -17,6 +17,7 @@ class Character{
   
  public:
   Character(Rectangle Body, const char * name, Camera2D* camera);
+  Character(){};
 
   void setSpeed(float newSpeed);
   void draw();

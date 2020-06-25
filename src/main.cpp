@@ -6,6 +6,8 @@
 
 bool loadMainMenu = true;
 bool GameOver = false;
+bool MapInit = false;
+bool BordInit = false;
 
 const int screenWidth = 800; //try to move back into main() 
 const int screenHeight = 450;
@@ -28,25 +30,28 @@ int main(void)
   InitWindow(screenWidth, screenHeight, "Simple Game");
   SetTargetFPS(144); // Set FPS
 
-  Camera2D* camera;
+  Camera2D* camera = new Camera2D;
   camera->offset = {screenWidth/2, screenHeight/2 };
   camera->target = {0,0};
   camera->rotation = 0.0f;
   camera->zoom = 1.0f;
 
-  LinkedList<Rectangle>* buildList;
-  LinkedList<Rectangle>* sceneElements; //Shouldnt be Rect list since other shapes will define the environment
-  LinkedList<Character>* unitList;
-
+  LinkedList<Rectangle>* buildList = new LinkedList<Rectangle>;
+  LinkedList<Rectangle>* sceneElements = new LinkedList<Rectangle>; //Shouldnt be Rect list since other shapes will define the environment
+  LinkedList<Character>* unitList = new LinkedList<Character>;
+  
   // Make 2 Player's (Testing Purposes)
   Rectangle pBody = {20,20,50,100};
-  Character play(pBody,"Player 1",camera);
-  Node<Character>* player = new Node<Character> (play,"Player1");
+  Node<Character>* player = new Node<Character> (Character(pBody,"Player 1",camera), "Player 1");
   unitList->addtoBack(player);
-
+  
   Rectangle pBody2 = {80,20,50,100};
-  Node<Character>* player2 = new Node<Character> (Character(pBody2,"Player 2",camera), "PLayer 2");
+  Node<Character>* player2 = new Node<Character> (Character(pBody2,"Player 2",camera), "Player 2");
   unitList->addtoBack(player2);
+
+  Rectangle pBody3 = {140,20,50,100};
+  Node<Character>* player3 = new Node<Character> (Character(pBody3,"Player 3",camera), "Player 3");
+  unitList->addtoBack(player3);
 
   // Main game loop
   while (!WindowShouldClose())    // Detect window close button or ESC key
@@ -84,45 +89,42 @@ void MainMenu(){
 
 void GameLogic(LinkedList<Rectangle>* buildList, LinkedList<Rectangle>* sceneElements, LinkedList<Character>* unitList, Camera2D* camera){
   // Run calculations and update positions (and existence) of objects
-  InitializeMap(buildList);
+  if(MapInit == false)
+    InitializeMap(buildList);
   CameraUpdate(camera);
-
+  unitList->printNames();
   //Update all Units Pos and Status (Maybe merge into one function) 
-  for(int i = 0; i < unitList->size(); i++){
-    Node<Character>* temp = unitList->getNodei(i);
-    temp->data.updatePos(camera);
-    temp->data.updateStatus(camera);
-    delete temp;
+  for(int i = 1; i <= unitList->size(); i++){
+    unitList->getNodei(i)->data.updatePos(camera);
+    unitList->getNodei(i)->data.updateStatus(camera);
   }
+  unitList->printNames();
 
   //Add Border
-  
-  Node<Rectangle>* Border = new Node<Rectangle> (Rectangle{0,0,2000,1000},"Border");
-  sceneElements->addtoFront(Border);
+  if(BordInit == false){
+    Node<Rectangle>* Border = new Node<Rectangle> (Rectangle{0,0,2000,1000},"Border");
+    sceneElements->addtoFront(Border);
+    BordInit = true;
+  }
 
 }
 
-void GameDraw(LinkedList<Rectangle>* buildList, LinkedList<Rectangle>* sceneElements, LinkedList<Character>* unitList, Camera2D* camera){
-  // Draw all RELEVANT objects
-  
+void GameDraw(LinkedList<Rectangle>* buildList, LinkedList<Rectangle>* sceneElements, LinkedList<Character>* unitList, Camera2D* camera){ 
   BeginDrawing();
   ClearBackground(RAYWHITE);
   BeginMode2D(*camera);
   
   //Draw Scene elements
-  DrawRectangleLinesEx(sceneElements->getNodebyID(0)->data, 5, BLACK); 
+  DrawRectangleLinesEx(sceneElements->getNodei(1)->data, 5, BLACK); 
   
   //Draw all Units
-  for(int i = 1; i < unitList->size();i++){//This is an example of what all Draw functions should look like, need to make Building a class type and Scene element a class type and implement .draw() method
-    Node<Character>* temp = unitList->getNodei(i);
-    temp->data.draw();
-    delete temp;
+  unitList->printNames();
+  for(int i = 1; i <= unitList->size();i++){//This is an example of what all Draw functions should look like, need to make Building a class type and Scene element a class type and implement .draw() method
+    unitList->getNodei(i)->data.draw();
   }
   //Draw all Buildings
-  for(int i = 1; i < buildList->size(); i++){
-    Node<Rectangle>* temp = buildList->getNodei(i);
-    DrawRectangleRec(temp->data,BLUE);
-    delete temp;
+  for(int i = 1; i <= buildList->size(); i++){
+    DrawRectangleRec(buildList->getNodei(i)->data,BLUE);
   }
 
   
@@ -161,10 +163,13 @@ void CameraUpdate(Camera2D* camera){
 
 void InitializeMap(LinkedList<Rectangle>* buildList){
   // Add bases
+  
   Node<Rectangle>* b1 = new Node<Rectangle> (Rectangle{50,375,100,250},"b1");
   Node<Rectangle>* b2 = new Node<Rectangle> (Rectangle{1850,375,100,250},"b2");
   
   buildList->addtoBack(b1);
   buildList->addtoBack(b2);
+
+  MapInit = true;
 }
 

@@ -12,6 +12,7 @@ class Node{
   Node* next;
  public: 
   Node(type_value object, const char* name);
+  Node(){};
 };
 
 template <typename T>
