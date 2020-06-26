@@ -28,6 +28,7 @@ class LinkedList{
   node_ptr getNodebyID(int ID);
   int size();
   node_ptr getNodei(int i);
+  node_ptr getNodebyPos(int x,int y);
 };
 
 template <typename T>
@@ -84,7 +85,7 @@ void LinkedList<T>::printNames(){
   node_ptr temp;
   temp = front_ptr;
   for(int i = 1; i <= listSize; i++){
-    std::cout << temp->name << " X value: " << temp->data.getX() << std::endl;
+    std::cout << temp->name << std::endl;
     temp = temp->next;
   }
 }
@@ -98,8 +99,6 @@ void LinkedList<T>::printIDs(){
     std::cout << temp->ID << std::endl;
     temp = temp->next;
   }
-  if(temp->next == nullptr)
-    std::cout << "NULL\n";
 }
 
 template <typename T>
@@ -185,6 +184,20 @@ Node<T>* LinkedList<T>::getNodei(int i){
     temp = temp->next;
   }
   return temp;
+}
+
+template <typename T>
+Node<T>* LinkedList<T>::getNodebyPos(int x, int y){
+  node_ptr temp = new node_type;
+  temp = front_ptr;
+  if(temp->data.getX() == x && temp->data.getY() == y)
+    return temp;
+  for(int i=1; i <= listSize-1; i++){
+    temp = temp->next;
+    if(temp->data.getX() == x && temp->data.getY() == y){
+      return temp;
+    }
+  }
 }
 
 #endif //LINKED_LIST

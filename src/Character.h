@@ -26,6 +26,8 @@ class Character{
   void moveToPoint(int x,int y);
   float getX();
   float getY();
+  float getWidth();
+  float getHeight();
   
   
 };

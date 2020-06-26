@@ -1,5 +1,4 @@
 #include "Character.h"
-#include <iostream>
 
 Character::Character(Rectangle Body,  const char* name, Camera2D* camera){
   this->body = Body;
@@ -34,7 +33,6 @@ void Character::updateStatus(Camera2D* camera){
     mPos = GetScreenToWorld2D(mPos,*camera);
     int mx = (int)mPos.x;
     int my = (int)mPos.y;
-    std::cout << mx << " " << my << "\n" << body.x << " " << body.y << "\n";
     if(mx >= body.x && mx <= body.x+body.width && my >= body.y && my <= body.y+body.height){
       this->isSelected = true;
     }
@@ -60,14 +58,8 @@ void Character::moveToPoint(int x, int y){
   }
 }
 
-void Character::draw(){
-  DrawRectanglePro(body, Vector2{0,0},0.0f,BLACK);
-}
-
-float Character::getX(){
-  return body.x;
-}
-
-float Character::getY(){
-  return body.y;
-}
+void Character::draw(){DrawRectanglePro(body, Vector2{0,0},0.0f,BLACK);}
+float Character::getX(){return body.x;}
+float Character::getY(){return body.y;}
+float Character::getWidth(){return body.width;}
+float Character::getHeight(){return body.height;}
