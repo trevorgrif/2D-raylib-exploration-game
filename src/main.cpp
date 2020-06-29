@@ -178,7 +178,7 @@ void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* scene
   //load bldgTable 
   Structure* b1 = new Structure(Rectangle{3*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map);
   Structure* b2 = new Structure(Rectangle{92*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map);
-  
+
   bldgTable->insert({getInt(),b1});
   bldgTable->insert({getInt(),b2});
 
@@ -187,6 +187,10 @@ void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* scene
   Border->setFill(false);
   Border->setColor(BLACK);
   sceneElements->insert({getInt(),Border});
+
+  map->find(Vector2{4*20,21*20})->second->setBlocked(true);
+  map->find(Vector2{4*20,22*20})->second->setBlocked(true);
+  map->find(Vector2{4*20,23*20})->second->setBlocked(true);
   
   //load unitTable
   Rectangle pBody = {20,20,20,20};

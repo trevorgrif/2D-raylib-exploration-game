@@ -19,11 +19,11 @@ public:
 class Chunk{
  private:
   Rectangle body = Rectangle{0,0,0,0};
-  bool blocked = false;
+  bool blocked{false};
   
  public:
   //Chunk(){}; // make template work
-  Chunk(Rectangle body){this->body = body;this->blocked = true;};
+  Chunk(Rectangle body){this->body = body;};
   Rectangle getRect(){return this->body;};
   void setBlocked(bool value){this->blocked = value;};
   bool isBlocked(){return blocked;};
