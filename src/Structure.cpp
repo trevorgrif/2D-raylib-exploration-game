@@ -11,7 +11,7 @@ Structure::Structure(Rectangle body, std::map<Vector2,Chunk*,Vec2Compare>* map, 
   this->map = map;
   for(int x = this->body.x; x <= this->body.x + this->body.width; x = x+20){
     for(int y = this->body.y; y <= this->body.y + this->body.height; y = y+20){
-      this->map->at(Vector2{x,y})->setBlocked(true);
+      this->map->at(Vector2{(float)x,(float)y})->setBlocked(true);
     }
   }
 }

@@ -13,9 +13,9 @@ float screenWidth;
 float screenHeight;
 
 //Temporary Hard Coded Map dimenisons, should be extracted form file and dynbamically changed in MM
-int mapWidth{2000};
-int mapHeight{2000};
-int chunkLength{20};
+float mapWidth{2000};
+float mapHeight{2000};
+float chunkLength{20};
 
 int MrKey{0};
 //NOTE: For player movement, intial click should return closest possible position on map, if structure is built along the jouney which blocks the path then unit should recalculate path after it realizes original path has been obstructed (Everytime player moves along the path it should check if chunk is blocked) 
@@ -169,17 +169,12 @@ void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* scene
   //Build Map
   for(int i = 0; i <= mapWidth-chunkLength; i = i+chunkLength){ //This doesn't seem to work
     for(int j = 0; j <= mapHeight-chunkLength; j = j+chunkLength){
-      map->insert({Vector2{i,j}, new Chunk(Rectangle{i,j,chunkLength,chunkLength})});
+      Vector2 v;
+      v.x = i;
+      v.y =j;
+      map->insert(std::pair<Vector2, Chunk*>{v, new Chunk(Rectangle{(float)i,(float)j,chunkLength,chunkLength})});
     }
   }
-  //map->insert({Vector2{20,40}, new Chunk(Rectangle{20,40,chunkLength,chunkLength})}); //This works, if you uncomment this then map->find() works
-  
-  std::cout << map->cbegin()->first.x << " " << map->cend()->first.x << std::endl;
-  if(map->find(Vector2{20,40}) == map->cend()) //Checking if the declaration actually worked
-    std::cout << "It's the end\n";
-  map->find(Vector2{20,40})->second->isBlocked();
-  std::cout << "We made it out\n";
-
   //load bldgTable 
   Structure* b1 = new Structure(Rectangle{3*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map);
   Structure* b2 = new Structure(Rectangle{92*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map);

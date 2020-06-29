@@ -22,7 +22,7 @@ void Character::updatePos(Camera2D* camera){
       mPos = GetScreenToWorld2D(mPos,*camera);
       this->x = (float)((int)mPos.x - ((int)mPos.x % 20)); //Should be ChunkLength
       this->y = (float)((int)mPos.y - ((int)mPos.y % 20));
-      if(map->find(Vector2{(int)this->x,(int)this->y})->second->isBlocked() == true){
+      if(map->find(Vector2{(float)this->x,(float)this->y})->second->isBlocked() == true){
 	this->m = (this->y - this->body.y)/(this->x - this->body.x);
 	this->b = -1*this->m*this->body.x +this->body.y;
 	do{
@@ -30,7 +30,7 @@ void Character::updatePos(Camera2D* camera){
 	    this->x = this->x - 20; //chunkLength
 	    this->y = (float)((int)gety(this->x) - ((int)gety(this->x) % 20));
 	    }
-	}while(map->find(Vector2{(int)this->x,(int)this->y})->second->isBlocked() == true);
+	}while(map->find(Vector2{(float)this->x,(float)this->y})->second->isBlocked() == true);
       }
       isMoving = true;
     }   
