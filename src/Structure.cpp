@@ -1,12 +1,19 @@
 #include "Structure.h"
 
-Structure::Structure(Rectangle body){
+Structure::Structure(Rectangle body,std::map<Vector2,Chunk*,Vec2Compare>* map){
   this->body = body;
+  this->map = map;
 }
 
-Structure::Structure(Rectangle body, Color color){
+Structure::Structure(Rectangle body, std::map<Vector2,Chunk*,Vec2Compare>* map, Color color){
   this->body = body;
   this->color = color;
+  this->map = map;
+  for(int x = this->body.x; x <= this->body.x + this->body.width; x = x+20){
+    for(int y = this->body.y; y <= this->body.y + this->body.height; y = y+20){
+      this->map->at(Vector2{x,y})->setBlocked(true);
+    }
+  }
 }
 
 void Structure::draw(){

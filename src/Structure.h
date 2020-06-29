@@ -2,6 +2,8 @@
 #define STRUCTURE_H
 
 #include "raylib.h"
+#include <map>
+#include "Chunk.h"
 #include <iostream>
 
 class Structure{
@@ -10,10 +12,11 @@ private:
   Color color{BLUE};
   int health{100};
   bool fill{true};
+  std::map<Vector2,Chunk*,Vec2Compare>* map;
 public:
   Structure(){}; //Needed to make template LL work
-  Structure(Rectangle body);
-  Structure(Rectangle body,Color color);
+  Structure(Rectangle body,std::map<Vector2,Chunk*,Vec2Compare>* map);
+  Structure(Rectangle body,std::map<Vector2,Chunk*,Vec2Compare>* map,Color color);
   void draw();
   Rectangle getBody();
   int getHealth();

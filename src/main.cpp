@@ -4,7 +4,7 @@
 #include "Character.h"
 #include "Structure.h"
 #include "Chunk.h"
-#include "LinkedList.h"
+#include <map>
 
 bool loadMainMenu = true;
 bool GameOver = false;
@@ -17,17 +17,21 @@ int mapWidth{2000};
 int mapHeight{2000};
 int chunkLength{20};
 
+int MrKey{0};
+//NOTE: For player movement, intial click should return closest possible position on map, if structure is built along the jouney which blocks the path then unit should recalculate path after it realizes original path has been obstructed (Everytime player moves along the path it should check if chunk is blocked) 
 int mx0,my0;
 
 // Primary Functions
-void MainMenu(LinkedList<Structure>* buildList, LinkedList<Structure>* sceneElements, LinkedList<Character>* unitList, Camera2D* camera, LinkedList<Chunk>* map);
-void GameLogic(LinkedList<Structure>* buildList, LinkedList<Structure>* sceneElements, LinkedList<Character>* unitList, Camera2D* camera, LinkedList<Chunk>* map);
-void GameDraw(LinkedList<Structure>* buildList, LinkedList<Structure>* sceneElements, LinkedList<Character>* unitList, Camera2D* camera, LinkedList<Chunk>* map);
+void MainMenu(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sceneElements, std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map);
+void GameLogic(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sceneElements, std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map);
+void GameDraw(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sceneElements, std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map);
 void EndScreen();
 
 // Helper Functions
 void CameraUpdate(Camera2D* Camera);
-void initMap(LinkedList<Structure>* buildList,LinkedList<Structure>* sceneElements,LinkedList<Character>* unitList, Camera2D* camera, LinkedList<Chunk>* map);
+void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* sceneElements,std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map);
+int getInt(){MrKey++;return MrKey;}
+
 
 int main(void){
   // Initialization: Screen, Camera, List Declarations
@@ -43,20 +47,20 @@ int main(void){
   camera->rotation = 0.0f;
   camera->zoom = 1.0f;
 
-  LinkedList<Structure>* buildList = new LinkedList<Structure>;
-  LinkedList<Structure>* sceneElements = new LinkedList<Structure>;
-  LinkedList<Character>* unitList = new LinkedList<Character>;
-  LinkedList<Chunk>* map = new LinkedList<Chunk>;
+  std::map<int, Structure*>* bldgTable = new std::map<int,Structure*>;
+  std::map<int, Structure*>* sceneElements = new std::map<int,Structure*>;
+  std::map<int, Character*>* unitTable = new std::map<int,Character*>;
+  std::map<Vector2,Chunk*,Vec2Compare>* map = new std::map<Vector2,Chunk*,Vec2Compare>;
   
   // Main game loop
   while (!WindowShouldClose())    // Detect window close button or ESC key
     {
       if(loadMainMenu == true){
-	MainMenu(buildList, sceneElements, unitList,camera, map); //ideally scene elements pulled from a data file accessible in MM, hardcoded for now
+	MainMenu(bldgTable, sceneElements, unitTable,camera, map); //ideally scene elements pulled from a data file accessible in MM, hardcoded for now
       }
       else if(GameOver == false){
-	GameLogic(buildList, sceneElements, unitList, camera, map);
-	GameDraw(buildList, sceneElements, unitList, camera, map);
+	GameLogic(bldgTable, sceneElements, unitTable, camera, map);
+	GameDraw(bldgTable, sceneElements, unitTable, camera, map);
       }
       else{
 	EndScreen();
@@ -67,14 +71,14 @@ int main(void){
   return 0;
 }
 
-void MainMenu(LinkedList<Structure>* buildList, LinkedList<Structure>* sceneElements, LinkedList<Character>* unitList, Camera2D* camera, LinkedList<Chunk>* map){
+void MainMenu(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sceneElements, std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map){
   // Create Menu Items
   Button start ("start",(float)screenWidth/2.0-100,(float)screenHeight/2-50.0,200,100,Vector2{0,0},0.0f);
   
   // Logic
   if(start.isMouseClick()){
     loadMainMenu = false;
-    initMap(buildList,sceneElements,unitList,camera, map);
+    initMap(bldgTable,sceneElements,unitTable,camera, map);
   }
 
   // Display Menu items
@@ -84,53 +88,49 @@ void MainMenu(LinkedList<Structure>* buildList, LinkedList<Structure>* sceneElem
   EndDrawing();
 }
 
-void GameLogic(LinkedList<Structure>* buildList, LinkedList<Structure>* sceneElements, LinkedList<Character>* unitList, Camera2D* camera, LinkedList<Chunk>* map){
+void GameLogic(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sceneElements, std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map){
   // Run calculations and update positions (and existence) of objects
   CameraUpdate(camera);
   //Update all Units Pos and Status (Maybe merge into one function) 
-  for(int i = 1; i <= unitList->size(); i++){
-    unitList->getNodei(i)->data.updatePos(camera);
-    unitList->getNodei(i)->data.updateStatus(camera);
+  for(auto it = unitTable->cbegin(); it != unitTable->cend(); ++it){
+    it->second->updatePos(camera);
+    it->second->updateStatus(camera);
   }
 }
 
-void GameDraw(LinkedList<Structure>* buildList, LinkedList<Structure>* sceneElements, LinkedList<Character>* unitList, Camera2D* camera, LinkedList<Chunk>* map){ 
+void GameDraw(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sceneElements, std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map){ 
   BeginDrawing();
   ClearBackground(RAYWHITE);
   BeginMode2D(*camera);
 
-  // Everything should only be drawn if in scene window (or close to it)
+  // Everything should only be drawn if in scene window (or close to it) (Consider turning into a function is have to do multiple times)
   Vector2 v = GetScreenToWorld2D(Vector2{0,0},*camera);
-  int cx = v.x;
-  int cy = v.y;
+  int cxmin = v.x;
+  int cymin = v.y;
   v = GetScreenToWorld2D(Vector2{screenWidth,screenHeight},*camera);
-  int cx1 = v.x;
-  int cy1 = v.y;
+  int cxmax = v.x;
+  int cymax = v.y;
   
   //Draw Scene elements
-  for(int i = 1; i <= sceneElements->size(); i++){
-    Structure* temp = &sceneElements->getNodei(i)->data;
-    if(temp->getX()+temp->getWidth() >= cx && temp->getX() <= cx1 && temp->getY()+temp->getHeight() >= cy && temp->getY() <= cy1)
-      temp->draw();
+  for(auto it = sceneElements->cbegin(); it != sceneElements->cend(); ++it){
+    if(it->second->getX() + it->second->getWidth() >= cxmin && it->second->getX() <= cxmax && it->second->getY()+it->second->getHeight() >= cymin && it->second->getY() <= cymax)
+      it->second->draw();
   } 
   //Draw all Units
-  for(int i = 1; i <= unitList->size();i++){
-    Character* temp = &unitList->getNodei(i)->data;
-    if(temp->getX()+temp->getWidth() >= cx && temp->getX() <= cx1 && temp->getY()+temp->getHeight() >= cy && temp->getY() <= cy1)
-      temp->draw();
+  for(auto it = unitTable->cbegin(); it != unitTable->cend();++it){
+    if(it->second->getX()+it->second->getWidth() >= cxmin && it->second->getX() <= cxmax && it->second->getY()+it->second->getHeight() >= cymin && it->second->getY() <= cymax)
+      it->second->draw();
   }
   //Draw all Structures
-  for(int i = 1; i <= buildList->size(); i++){
-    Structure* temp = &buildList->getNodei(i)->data;
-    if(temp->getX()+temp->getWidth() >= cx && temp->getX() <= cx1 && temp->getY()+temp->getHeight() >= cy && temp->getY() <= cy1)
-      temp->draw();
+  for(auto it = bldgTable->cbegin(); it != bldgTable->cend(); ++it){
+    if(it->second->getX()+it->second->getWidth() >= cxmin && it->second->getX() <= cxmax && it->second->getY()+it->second->getHeight() >= cymin && it->second->getY() <= cymax)
+      it->second->draw();
   }
   //Draw Map (Causes severe lag, dont do it silly)
-  /*for(int i=1; i <=map->size(); i++){
-    Chunk* temp = &map->getNodei(i)->data;
-    //if(temp->getRect().x+temp->getRect().width >= cx && temp->getRect().x <= cx + screenWidth && temp->getRect().y+temp->getRect().height >= cy && temp->getRect().y <= cy+screenHeight)
-      DrawRectangleLinesEx(temp->getRect(), 1, RED);
-      }*/
+  for(auto it = map->cbegin(); it != map->cend(); ++it){
+    if(it->second->getRect().x+it->second->getRect().width >= cxmin && it->second->getRect().x <= cxmax && it->second->getRect().y+it->second->getRect().height >= cymin && it->second->getRect().y <= cymax)
+      DrawRectangleLinesEx(it->second->getRect(), 1, RED);
+    }
 
   EndMode2D();
   EndDrawing();
@@ -165,39 +165,47 @@ void CameraUpdate(Camera2D* camera){
   
 }
 
-void initMap(LinkedList<Structure>* buildList,LinkedList<Structure>* sceneElements,LinkedList<Character>* unitList, Camera2D* camera, LinkedList<Chunk>* map){
+void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* sceneElements,std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map){
   //Build Map
-  for(int i = 0; i <= mapWidth-chunkLength; i = i+chunkLength){
+  for(int i = 0; i <= mapWidth-chunkLength; i = i+chunkLength){ //This doesn't seem to work
     for(int j = 0; j <= mapHeight-chunkLength; j = j+chunkLength){
-      Node<Chunk>* temp = new Node<Chunk> (Rectangle{i,j,chunkLength,chunkLength}, "Remove this dumb var");
-      map->addtoFront(temp);
+      map->insert({Vector2{i,j}, new Chunk(Rectangle{i,j,chunkLength,chunkLength})});
     }
   }
-
-  //load buildList 
-  Node<Structure>* b1 = new Node<Structure> (Structure(Rectangle{50,375,100,250}),"b1");
-  Node<Structure>* b2 = new Node<Structure> (Structure(Rectangle{1850,375,100,250}),"b2");
+  //map->insert({Vector2{20,40}, new Chunk(Rectangle{20,40,chunkLength,chunkLength})}); //This works, if you uncomment this then map->find() works
   
-  buildList->addtoBack(b1);
-  buildList->addtoBack(b2);
+  std::cout << map->cbegin()->first.x << " " << map->cend()->first.x << std::endl;
+  if(map->find(Vector2{20,40}) == map->cend()) //Checking if the declaration actually worked
+    std::cout << "It's the end\n";
+  map->find(Vector2{20,40})->second->isBlocked();
+  std::cout << "We made it out\n";
+
+  //load bldgTable 
+  Structure* b1 = new Structure(Rectangle{3*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map);
+  Structure* b2 = new Structure(Rectangle{92*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map);
+  
+  bldgTable->insert({getInt(),b1});
+  bldgTable->insert({getInt(),b2});
 
   //load sceneElements
-  Node<Structure>* Border = new Node<Structure> (Structure(Rectangle{0,0,mapWidth,mapHeight}),"Border"); //Border might end up being useless if movement depends on map path finding
-  Border->data.setFill(false);
-  Border->data.setColor(BLACK);
-  sceneElements->addtoFront(Border);
+  Structure* Border = new Structure(Rectangle{0,0,mapWidth,mapHeight},map); //Border might end up being useless if movement depends on map path finding
+  Border->setFill(false);
+  Border->setColor(BLACK);
+  sceneElements->insert({getInt(),Border});
   
-  //load unitList
-  Rectangle pBody = {20,20,50,100};
-  Node<Character>* player = new Node<Character> (Character(pBody,"Player 1",camera), "Player 1");
-  unitList->addtoBack(player);
+  //load unitTable
+  Rectangle pBody = {20,20,20,20};
+  Character* player = new Character(pBody,"Player 1",camera,map);
+  unitTable->insert({getInt(),player});
   
-  Rectangle pBody2 = {80,20,50,100};
-  Node<Character>* player2 = new Node<Character> (Character(pBody2,"Player 2",camera), "Player 2");
-  unitList->addtoBack(player2);
+  Rectangle pBody2 = {80,20,20,20};
+  Character* player2 = new Character(pBody2,"Player 2",camera,map);
+  unitTable->insert({getInt(),player2});
 
-  Rectangle pBody3 = {140,20,50,100};
-  Node<Character>* player3 = new Node<Character> (Character(pBody3,"Player 3",camera), "Player 3");
-  unitList->addtoBack(player3);
+  Rectangle pBody3 = {140,20,20,20};
+  Character* player3 = new Character(pBody3,"Player 3",camera,map);
+  unitTable->insert({getInt(),player3});
 }
+
+
 

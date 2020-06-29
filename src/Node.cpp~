@@ -1,7 +1,0 @@
-#include "Node.h"
-
-Node::Node(type_value object,const char* name){
-  this->data = object;
-  this->name = name;
-  this->next = NULL;
-}
