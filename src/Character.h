@@ -21,8 +21,15 @@ class Character{
   bool isMoving{false};
   std::map<Vector2,Chunk*,Vec2Compare>* map;
   static int numSelected;
-  static int MouseDisplaceX;
-  static int MouseDisplaceY;
+
+  Rectangle region;
+  float x_init{GetMouseX()};
+  float y_init{GetMouseY()};
+  bool regionActive{false};
+  bool markSet{false};
+  Vector2 currV;
+  static Vector2 mouseClickPoint;
+  static ChunkType MCP_type;
   
  public:
   Character(Rectangle Body, const char * name, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map);
@@ -30,20 +37,18 @@ class Character{
   
   void setSpeed(float newSpeed);
   void draw();
-  void updatePos(Camera2D* camera);
-  void updateStatus(Camera2D* camera);
+  void updateUnit(Camera2D* camera);
   void moveToPoint(float x,float y);
   float getX();
   float getY();
   float getWidth();
   float getHeight();
   float gety(float x);
-  float modChunkLength(float x);
   void select();
   void deselect();
   bool isSelected();
-  bool mouseMoved();
   int Vec2Quad(Vector2 v);
+  void analyzeMCP();
   
   
 };

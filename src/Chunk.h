@@ -1,7 +1,12 @@
 #ifndef CHUNK_H
 #define CHUNK_H
 #include <iostream>
+#include "raylib.h"
 
+enum ChunkType{unitSpace,freeSpace,structSpace,null};
+
+extern float chunkLength;
+extern float modChunkLength(float x);
 
 class Vec2Compare{
 public:
@@ -22,6 +27,7 @@ class Chunk{
   Rectangle body = Rectangle{0,0,0,0};
   bool blocked{false};
   Color color{GREEN};
+  ChunkType chunk_type{freeSpace}; 
   
  public:
   Chunk(Rectangle body){this->body = body;};
@@ -32,6 +38,10 @@ class Chunk{
   void setY(float y){this->body.y = y;};
   void setColor(Color color){this->color = color;};
   Color getColor(){return this->color;};
+  ChunkType getChunkType(){return this->chunk_type;};
+  void setChunkType(ChunkType newType);
+  void draw();
+  
 };
 
 #endif //CHUNK_H

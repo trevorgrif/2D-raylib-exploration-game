@@ -3,6 +3,12 @@
 Structure::Structure(Rectangle body,std::map<Vector2,Chunk*,Vec2Compare>* map){
   this->body = body;
   this->map = map;
+  
+  for(int i = modChunkLength(body.x); i < modChunkLength(body.x+body.width); i = i+chunkLength){
+    for(int j = modChunkLength(body.y); j < modChunkLength(body.y + body.height); j = j+chunkLength){
+      map->find(Vector2{i,j})->second->setChunkType(structSpace);
+    }
+  }
 }
 
 Structure::Structure(Rectangle body, std::map<Vector2,Chunk*,Vec2Compare>* map, Color color){

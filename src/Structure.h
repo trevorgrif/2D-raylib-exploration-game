@@ -2,8 +2,8 @@
 #define STRUCTURE_H
 
 #include "raylib.h"
-#include <map>
 #include "Chunk.h"
+#include <map>
 #include <iostream>
 
 class Structure{

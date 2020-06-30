@@ -1,9 +1,9 @@
 #include "raylib.h"
+#include "Chunk.h"
 #include <iostream> //Mostly for debugging
 #include "Button.h"
 #include "Character.h"
 #include "Structure.h"
-#include "Chunk.h"
 #include <map>
 
 bool loadMainMenu = true;
@@ -15,7 +15,6 @@ float screenHeight;
 //Temporary Hard Coded Map dimenisons, should be extracted form file and dynbamically changed in MM
 float mapWidth{2000};
 float mapHeight{2000};
-float chunkLength{20};
 
 int MrKey{0};
 //NOTE: For player movement, intial click should return closest possible position on map, if structure is built along the jouney which blocks the path then unit should recalculate path after it realizes original path has been obstructed (Everytime player moves along the path it should check if chunk is blocked) 
@@ -92,8 +91,7 @@ void GameLogic(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sc
   CameraUpdate(camera);
   //Update all Units Pos and Status (Maybe merge into one function) 
   for(auto it = unitTable->cbegin(); it != unitTable->cend(); ++it){
-    it->second->updateStatus(camera);
-    it->second->updatePos(camera);
+    it->second->updateUnit(camera);
   }
 }
 
@@ -125,11 +123,11 @@ void GameDraw(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sce
     if(it->second->getX()+it->second->getWidth() >= cxmin && it->second->getX() <= cxmax && it->second->getY()+it->second->getHeight() >= cymin && it->second->getY() <= cymax)
       it->second->draw();
   }
-  //Draw Map (Causes severe lag, dont do it silly)
+  //Draw Map
   for(auto it = map->cbegin(); it != map->cend(); ++it){
     if(it->second->getRect().x+it->second->getRect().width >= cxmin && it->second->getRect().x <= cxmax && it->second->getRect().y+it->second->getRect().height >= cymin && it->second->getRect().y <= cymax)
-      DrawRectangleLinesEx(it->second->getRect(), 1, it->second->getColor());
-    }
+      it->second->draw();
+  }
 
   EndMode2D();
   EndDrawing();
@@ -140,7 +138,6 @@ void EndScreen(){
 }
 
 void CameraUpdate(Camera2D* camera){
-
   //Zoom settings
   camera->zoom += ((float)GetMouseWheelMove()*0.1f);
   if (camera->zoom > 3.0f) camera->zoom = 3.0f;
@@ -171,10 +168,11 @@ void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* scene
       map->insert(std::pair<Vector2, Chunk*>{Vector2{(float)i,(float)j}, new Chunk(Rectangle{(float)i,(float)j,chunkLength,chunkLength})});
     }
   }
+
   //load bldgTable 
   Structure* b1 = new Structure(Rectangle{3*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map);
   Structure* b2 = new Structure(Rectangle{92*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map);
-
+  
   bldgTable->insert({getInt(),b1});
   bldgTable->insert({getInt(),b2});
   for(int i=3; i < 8; i++){
@@ -185,14 +183,11 @@ void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* scene
   
 
   //load sceneElements
-  Structure* Border = new Structure(Rectangle{0,0,mapWidth,mapHeight},map); //Border might end up being useless if movement depends on map path finding TODO: Update with static
+  /*Structure* Border = new Structure(Rectangle{0,0,mapWidth,mapHeight},map); //Border might end up being useless if movement depends on map path finding TODO: Update with static
   Border->setFill(false);
   Border->setColor(BLACK);
-  sceneElements->insert({getInt(),Border});
-
-  map->find(Vector2{3*20,20*20})->second->setBlocked(true);
-  map->find(Vector2{3*20,21*20})->second->setBlocked(true);
-  map->find(Vector2{3*20,22*20})->second->setBlocked(true);
+  sceneElements->insert({getInt(),Border});*/
+  //Boder Cant be a Structure type
   
   //load unitTable
   Rectangle pBody = {20,20,20,20};
