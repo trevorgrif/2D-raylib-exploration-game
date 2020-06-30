@@ -32,7 +32,6 @@ void CameraUpdate(Camera2D* Camera);
 void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* sceneElements,std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map);
 int getInt(){MrKey++;return MrKey;}
 
-
 int main(void){
   // Initialization: Screen, Camera, List Declarations
   InitWindow(screenWidth, screenHeight, "Simple Game");
@@ -43,7 +42,7 @@ int main(void){
 
   Camera2D* camera = new Camera2D;//TODO: check memory leak
   camera->offset = {screenWidth/2, screenHeight/2 };
-  camera->target = {0,0};
+  camera->target = {mapWidth/2,mapHeight/2};
   camera->rotation = 0.0f;
   camera->zoom = 1.0f;
 
@@ -93,8 +92,8 @@ void GameLogic(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sc
   CameraUpdate(camera);
   //Update all Units Pos and Status (Maybe merge into one function) 
   for(auto it = unitTable->cbegin(); it != unitTable->cend(); ++it){
-    it->second->updatePos(camera);
     it->second->updateStatus(camera);
+    it->second->updatePos(camera);
   }
 }
 
@@ -129,7 +128,7 @@ void GameDraw(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sce
   //Draw Map (Causes severe lag, dont do it silly)
   for(auto it = map->cbegin(); it != map->cend(); ++it){
     if(it->second->getRect().x+it->second->getRect().width >= cxmin && it->second->getRect().x <= cxmax && it->second->getRect().y+it->second->getRect().height >= cymin && it->second->getRect().y <= cymax)
-      DrawRectangleLinesEx(it->second->getRect(), 1, RED);
+      DrawRectangleLinesEx(it->second->getRect(), 1, it->second->getColor());
     }
 
   EndMode2D();
@@ -167,12 +166,9 @@ void CameraUpdate(Camera2D* camera){
 
 void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* sceneElements,std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map){
   //Build Map
-  for(int i = 0; i <= mapWidth-chunkLength; i = i+chunkLength){ //This doesn't seem to work
+  for(int i = 0; i <= mapWidth-chunkLength; i = i+chunkLength){
     for(int j = 0; j <= mapHeight-chunkLength; j = j+chunkLength){
-      Vector2 v;
-      v.x = i;
-      v.y =j;
-      map->insert(std::pair<Vector2, Chunk*>{v, new Chunk(Rectangle{(float)i,(float)j,chunkLength,chunkLength})});
+      map->insert(std::pair<Vector2, Chunk*>{Vector2{(float)i,(float)j}, new Chunk(Rectangle{(float)i,(float)j,chunkLength,chunkLength})});
     }
   }
   //load bldgTable 
@@ -181,16 +177,22 @@ void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* scene
 
   bldgTable->insert({getInt(),b1});
   bldgTable->insert({getInt(),b2});
+  for(int i=3; i < 8; i++){
+    for(int j= 20; j < 20+12; j++){
+      map->find(Vector2{i*chunkLength,j*chunkLength})->second->setBlocked(true);
+    }
+  }
+  
 
   //load sceneElements
-  Structure* Border = new Structure(Rectangle{0,0,mapWidth,mapHeight},map); //Border might end up being useless if movement depends on map path finding
+  Structure* Border = new Structure(Rectangle{0,0,mapWidth,mapHeight},map); //Border might end up being useless if movement depends on map path finding TODO: Update with static
   Border->setFill(false);
   Border->setColor(BLACK);
   sceneElements->insert({getInt(),Border});
 
-  map->find(Vector2{4*20,21*20})->second->setBlocked(true);
-  map->find(Vector2{4*20,22*20})->second->setBlocked(true);
-  map->find(Vector2{4*20,23*20})->second->setBlocked(true);
+  map->find(Vector2{3*20,20*20})->second->setBlocked(true);
+  map->find(Vector2{3*20,21*20})->second->setBlocked(true);
+  map->find(Vector2{3*20,22*20})->second->setBlocked(true);
   
   //load unitTable
   Rectangle pBody = {20,20,20,20};
@@ -205,6 +207,5 @@ void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* scene
   Character* player3 = new Character(pBody3,"Player 3",camera,map);
   unitTable->insert({getInt(),player3});
 }
-
 
 

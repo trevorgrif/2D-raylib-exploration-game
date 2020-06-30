@@ -13,29 +13,41 @@ class Character{
   float y;
   float m;
   float b;
+  float displacement;
   const char * name;
   Camera2D* camera;
   bool CameraFocus{true};
-  bool isSelected{false};
+  bool selected{false};
   bool isMoving{false};
   std::map<Vector2,Chunk*,Vec2Compare>* map;
+  static int numSelected;
+  static int MouseDisplaceX;
+  static int MouseDisplaceY;
   
  public:
   Character(Rectangle Body, const char * name, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map);
   Character(){};
-
+  
   void setSpeed(float newSpeed);
   void draw();
   void updatePos(Camera2D* camera);
   void updateStatus(Camera2D* camera);
-  void moveToPoint(int x,int y);
+  void moveToPoint(float x,float y);
   float getX();
   float getY();
   float getWidth();
   float getHeight();
   float gety(float x);
+  float modChunkLength(float x);
+  void select();
+  void deselect();
+  bool isSelected();
+  bool mouseMoved();
+  int Vec2Quad(Vector2 v);
   
   
 };
+
+
 
 #endif //CHARACTER_H
