@@ -4,7 +4,19 @@
 #include "raylib.h"
 #include <map>
 #include <list>
+#include <set>
+#include <cstring>
+#include <utility>
+#include<bits/stdc++.h>
 #include "Chunk.h"
+
+typedef std::pair<int,int> Pair;
+typedef std::pair<float,Pair> pPair;
+
+struct cell{
+  int parent_i, parent_j;
+  double f,g,h; //f = g + h
+};
 
 class Character{
  private:
@@ -43,19 +55,25 @@ class Character{
   Character(){};
 
   int Vec2Quad(Vector2 v);
+
+  bool isUnBlocked(int row, int col);  
+  bool isDestination(int row, int col);
+  bool isValid(int row, int col);
   bool isSelected();
-  
+
+  float computeH(int row, int col);
   float gety(float x);
   float getHeight();
   float getWidth();
   float getX();
   float getY();
 
-  void findPath(Vector2 endPoint); //A* Search Algorithm
+  void setPath(cell cellDetails[][100]);
+  void findPath(); //A* Search Algorithm
   void updateUnit(Camera2D* camera);
-  void moveToPoint(float x,float y);
   void setSpeed(float newSpeed);
   void findNearestFreeChunk();
+  void moveAlongPath();
   void analyzeMCP();
   void deselect();
   void select();
