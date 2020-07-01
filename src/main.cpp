@@ -12,13 +12,12 @@ bool GameOver = false;
 float screenWidth;
 float screenHeight;
 
-//Temporary Hard Coded Map dimenisons, should be extracted form file and dynbamically changed in MM
+//Temporary Hard Coded Map dimenisons, should be extracted form file and dynamically changed in MM
 float mapWidth{2000};
 float mapHeight{2000};
 
 int MrKey{0};
 //NOTE: For player movement, intial click should return closest possible position on map, if structure is built along the jouney which blocks the path then unit should recalculate path after it realizes original path has been obstructed (Everytime player moves along the path it should check if chunk is blocked) 
-int mx0,my0;
 
 // Primary Functions
 void MainMenu(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sceneElements, std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map);
@@ -65,12 +64,11 @@ int main(void){
       }
     }
   CloseWindow();
-
   return 0;
 }
 
 void MainMenu(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sceneElements, std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map){
-  // Create Menu Items
+  // Create Menu Items TODO: Make this not look shitty
   Button start ("start",(float)screenWidth/2.0-100,(float)screenHeight/2-50.0,200,100,Vector2{0,0},0.0f);
   
   // Logic
@@ -87,9 +85,7 @@ void MainMenu(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sce
 }
 
 void GameLogic(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sceneElements, std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map){
-  // Run calculations and update positions (and existence) of objects
-  CameraUpdate(camera);
-  //Update all Units Pos and Status (Maybe merge into one function) 
+  CameraUpdate(camera); 
   for(auto it = unitTable->cbegin(); it != unitTable->cend(); ++it){
     it->second->updateUnit(camera);
   }
@@ -100,22 +96,21 @@ void GameDraw(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sce
   ClearBackground(RAYWHITE);
   BeginMode2D(*camera);
 
-  // Everything should only be drawn if in scene window (or close to it) (Consider turning into a function is have to do multiple times)
   Vector2 v = GetScreenToWorld2D(Vector2{0,0},*camera);
   int cxmin = v.x;
   int cymin = v.y;
   v = GetScreenToWorld2D(Vector2{screenWidth,screenHeight},*camera);
   int cxmax = v.x;
   int cymax = v.y;
-  
+
+  //Draw Map
+  for(auto it = map->cbegin(); it != map->cend(); ++it){
+    if(it->second->getRect().x+it->second->getRect().width >= cxmin && it->second->getRect().x <= cxmax && it->second->getRect().y+it->second->getRect().height >= cymin && it->second->getRect().y <= cymax)
+      it->second->draw();
+  }
   //Draw Scene elements
   for(auto it = sceneElements->cbegin(); it != sceneElements->cend(); ++it){
     if(it->second->getX() + it->second->getWidth() >= cxmin && it->second->getX() <= cxmax && it->second->getY()+it->second->getHeight() >= cymin && it->second->getY() <= cymax)
-      it->second->draw();
-  } 
-  //Draw all Units
-  for(auto it = unitTable->cbegin(); it != unitTable->cend();++it){
-    if(it->second->getX()+it->second->getWidth() >= cxmin && it->second->getX() <= cxmax && it->second->getY()+it->second->getHeight() >= cymin && it->second->getY() <= cymax)
       it->second->draw();
   }
   //Draw all Structures
@@ -123,12 +118,11 @@ void GameDraw(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sce
     if(it->second->getX()+it->second->getWidth() >= cxmin && it->second->getX() <= cxmax && it->second->getY()+it->second->getHeight() >= cymin && it->second->getY() <= cymax)
       it->second->draw();
   }
-  //Draw Map
-  for(auto it = map->cbegin(); it != map->cend(); ++it){
-    if(it->second->getRect().x+it->second->getRect().width >= cxmin && it->second->getRect().x <= cxmax && it->second->getRect().y+it->second->getRect().height >= cymin && it->second->getRect().y <= cymax)
+  //Draw all Units
+  for(auto it = unitTable->cbegin(); it != unitTable->cend();++it){
+    if(it->second->getX()+it->second->getWidth() >= cxmin && it->second->getX() <= cxmax && it->second->getY()+it->second->getHeight() >= cymin && it->second->getY() <= cymax)
       it->second->draw();
   }
-
   EndMode2D();
   EndDrawing();
 }
@@ -138,6 +132,8 @@ void EndScreen(){
 }
 
 void CameraUpdate(Camera2D* camera){
+  static int mx0;
+  static int my0;
   //Zoom settings
   camera->zoom += ((float)GetMouseWheelMove()*0.1f);
   if (camera->zoom > 3.0f) camera->zoom = 3.0f;
@@ -157,8 +153,6 @@ void CameraUpdate(Camera2D* camera){
     camera->target.x = camera->target.x+diffX;
     camera->target.y = camera->target.y+diffY;
   }
-  
-  
 }
 
 void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* sceneElements,std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map){
@@ -175,30 +169,24 @@ void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* scene
   
   bldgTable->insert({getInt(),b1});
   bldgTable->insert({getInt(),b2});
-  for(int i=3; i < 8; i++){
-    for(int j= 20; j < 20+12; j++){
-      map->find(Vector2{i*chunkLength,j*chunkLength})->second->setBlocked(true);
-    }
-  }
-  
 
   //load sceneElements
-  /*Structure* Border = new Structure(Rectangle{0,0,mapWidth,mapHeight},map); //Border might end up being useless if movement depends on map path finding TODO: Update with static
+  /*Structure* Border = new Structure(Rectangle{0,0,mapWidth,mapHeight},map); //Border might end up being useless if movement depends on map path finding
   Border->setFill(false);
   Border->setColor(BLACK);
   sceneElements->insert({getInt(),Border});*/
   //Boder Cant be a Structure type
   
   //load unitTable
-  Rectangle pBody = {20,20,20,20};
+  Rectangle pBody = {chunkLength,chunkLength,chunkLength,chunkLength};
   Character* player = new Character(pBody,"Player 1",camera,map);
   unitTable->insert({getInt(),player});
   
-  Rectangle pBody2 = {80,20,20,20};
+  Rectangle pBody2 = {4*chunkLength,chunkLength,chunkLength,chunkLength};
   Character* player2 = new Character(pBody2,"Player 2",camera,map);
   unitTable->insert({getInt(),player2});
 
-  Rectangle pBody3 = {140,20,20,20};
+  Rectangle pBody3 = {7*chunkLength,chunkLength,chunkLength,chunkLength};
   Character* player3 = new Character(pBody3,"Player 3",camera,map);
   unitTable->insert({getInt(),player3});
 }

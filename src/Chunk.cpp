@@ -1,6 +1,6 @@
 #include "Chunk.h"
 float chunkLength = 20;
-float modChunkLength(float x){return (float)((int)x - (int)x % (int)chunkLength);};
+float modChunkLength(float x){return (float)((int)x - (int)x % (int)chunkLength);}
 
 void Chunk::setChunkType(ChunkType newType){
   this->chunk_type = newType;
