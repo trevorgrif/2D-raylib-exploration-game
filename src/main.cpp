@@ -103,11 +103,7 @@ void GameDraw(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sce
   int cxmax = v.x;
   int cymax = v.y;
 
-  //Draw Map
-  for(auto it = map->cbegin(); it != map->cend(); ++it){
-    if(it->second->getRect().x+it->second->getRect().width >= cxmin && it->second->getRect().x <= cxmax && it->second->getRect().y+it->second->getRect().height >= cymin && it->second->getRect().y <= cymax)
-      it->second->draw();
-  }
+
   //Draw Scene elements
   for(auto it = sceneElements->cbegin(); it != sceneElements->cend(); ++it){
     if(it->second->getX() + it->second->getWidth() >= cxmin && it->second->getX() <= cxmax && it->second->getY()+it->second->getHeight() >= cymin && it->second->getY() <= cymax)
@@ -121,6 +117,11 @@ void GameDraw(std::map<int,Structure*>* bldgTable, std::map<int,Structure*>* sce
   //Draw all Units
   for(auto it = unitTable->cbegin(); it != unitTable->cend();++it){
     if(it->second->getX()+it->second->getWidth() >= cxmin && it->second->getX() <= cxmax && it->second->getY()+it->second->getHeight() >= cymin && it->second->getY() <= cymax)
+      it->second->draw();
+  }
+    //Draw Map
+  for(auto it = map->cbegin(); it != map->cend(); ++it){
+    if(it->second->getRect().x+it->second->getRect().width >= cxmin && it->second->getRect().x <= cxmax && it->second->getRect().y+it->second->getRect().height >= cymin && it->second->getRect().y <= cymax)
       it->second->draw();
   }
   EndMode2D();
@@ -178,7 +179,7 @@ void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* scene
   //Boder Cant be a Structure type
   
   //load unitTable
-  Rectangle pBody = {chunkLength,chunkLength,chunkLength,chunkLength};
+  Rectangle pBody = {chunkLength,chunkLength,chunkLength,chunkLength}; // TODO: Implement movement for larger units
   Character* player = new Character(pBody,"Player 1",camera,map);
   unitTable->insert({getInt(),player});
   

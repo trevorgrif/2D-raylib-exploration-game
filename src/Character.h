@@ -24,6 +24,7 @@ class Character{
   std::list<Vector2> path;
   Camera2D* camera;
   Vector2 currV;
+  Vector2 startPos;
   
   const char * name;
 
@@ -40,8 +41,6 @@ class Character{
   float speed{15*chunkLength}; //Note: unaffected by Monitor FPS since GetFrameTime() is called when moving
   float destinX;
   float destinY;
-  float m;
-  float b;
   float displacement;
   
   bool CameraFocus{true}; //Unused
@@ -62,7 +61,6 @@ class Character{
   bool isSelected();
 
   float computeH(int row, int col);
-  float gety(float x);
   float getHeight();
   float getWidth();
   float getX();

@@ -17,18 +17,7 @@ Character::Character(Rectangle Body,  const char* name, Camera2D* camera, std::m
     }
   }
 }
-/*
-  if(selected)
-      if(currPoint != travelPoint) then moveTowardsPoint
-      if(isAttacking and in range yadda yadda) then attack
-      travelPoint should be set by updateStatus when the following conditions occur
-      Unit is selected, clickEventOccurs
-          case 1: clickPoint is empty on map
-	  case 2: clickPoint is obstructed by environment variable (find nearest open location)
-	  case 3: clickPoint is another friendly unit
-	  case 4: clickPoint is an enemy or enemy structure (not to be dealt with yet)
-        
-*/
+
 void Character::updateUnit(Camera2D* camera){ // Interprets mouse action and updates unit accordingly
   currV = GetMousePosition();
   switch(markSet){
@@ -91,10 +80,16 @@ void Character::updateUnit(Camera2D* camera){ // Interprets mouse action and upd
 	  this->select();
 	MCP_type = null;
       }
-      else if(MCP_type == freeSpace || MCP_type == structSpace){ // Find closest actual free space pos.
+      else if(MCP_type == freeSpace || MCP_type == structSpace){ // Find closest actual free space pos. //TODO: Fix structSpace so that sceneSpaces are clickable later
 	if(this->selected == true){
+	  mPos = GetScreenToWorld2D(GetMousePosition(),*camera);
+	  destinX = mPos.x;
+	  destinY = mPos.y;
+	  if(path.size()){
+	    map->find(Vector2{path.front().x,path.front().y})->second->setChunkType(ChunkType::freeSpace);
+	    map->find(Vector2{startPos.x,startPos.y})->second->setChunkType(ChunkType::freeSpace);
+	  }
 	  findNearestFreeChunk();
-	  isMoving = true;
 	}
 	MCP_type = null;
       }
@@ -110,30 +105,17 @@ void Character::updateUnit(Camera2D* camera){ // Interprets mouse action and upd
     moveAlongPath();
 }
 
-// TODO: Make a better system for this, causes seg fault when moving multiple units near border
 void Character::findNearestFreeChunk(){ // Finds nearest open space and sets destinX and destinY to that location
-  Vector2 mPos = GetScreenToWorld2D(GetMousePosition(),*camera);
-  int dirX = this->body.x - mPos.x;
-  int dirY = this->body.y - mPos.y;
-  dirX = (dirX > 0) - (dirX < 0);
-  dirY = (dirY > 0) - (dirY < 0);
-  destinX = mPos.x - (dirX*displacement*chunkLength);
-  destinY = mPos.y - (dirY*displacement*chunkLength);
-  while(map->find(Vector2{modChunkLength(destinX),modChunkLength(destinY)})->second->isBlocked() == true){
-    if(modChunkLength(destinX) != modChunkLength(this->body.x)){ 
-      this->m = (destinY - this->body.y)/(destinX - this->body.x);
-      this->b = -1*this->m*this->body.x +this->body.y;
-      if(destinX > this->body.x)
-	destinX = destinX - (int)(chunkLength/4);
-      else if(destinX < this->body.x)
-	destinX = destinX + (int)(chunkLength/4);
-      destinY = gety(destinX);
+  while(path.size() && map->find(Vector2{path.back().x,path.back().y})->second->isBlocked() == true){ 
+    if(path.size() == 1){
+      destinX = body.x;
+      destinY = body.y;
+      path.pop_back();
     }
     else{
-      if(destinY > this->body.y)
-	destinY = destinY - chunkLength;
-      else
-	destinY = destinY + chunkLength;
+      path.pop_back();
+      destinX = path.back().x;
+      destinY = path.back().y;
     }
   }
   destinX = modChunkLength(destinX);
@@ -142,19 +124,30 @@ void Character::findNearestFreeChunk(){ // Finds nearest open space and sets des
   findPath();
 }
 
-void Character::moveAlongPath(){ // Incements player.pos towards next point on path
+void Character::moveAlongPath(){ // Increments player.pos towards next point on path
   Vector2 nextPoint = path.front();
   float x = nextPoint.x;
   float y = nextPoint.y;
-  map->find(Vector2{modChunkLength(body.x),modChunkLength(body.y)})->second->setChunkType(ChunkType::freeSpace);
+ 
+  if(abs(body.x-x) <= speed*GetFrameTime() && abs(body.y-y) <= speed*GetFrameTime()) // If about to arrive
+    map->find(Vector2{startPos.x,startPos.y})->second->setChunkType(ChunkType::freeSpace); // Free old chunk
   if(abs(body.x-x) <= speed*GetFrameTime()) //if close enough then set equal and stop moving"
     body.x = x;
   if(abs(body.y-y) <= speed*GetFrameTime())
     body.y = y;
   if(body.y == y && body.x == x){
+    startPos = Vector2{path.front().x,path.front().y};
     path.pop_front();
-    map->find(Vector2{modChunkLength(body.x),modChunkLength(body.y)})->second->setChunkType(ChunkType::unitSpace);
-    return;
+    if(path.size()){
+      if(map->find(Vector2{path.front().x,path.front().y})->second->isBlocked() == true){// If path is obstructed along the journey then find new path
+	std::cout << this->name << " path is obstructed at " << path.front().x << " " << path.front().y << std::endl;
+	findNearestFreeChunk();
+      }
+      if(map->find(Vector2{path.front().x,path.front().y})->second->isBlocked() == false && path.size()){
+	map->find(Vector2{path.front().x,path.front().y})->second->setChunkType(ChunkType::unitSpace);
+      }
+    }
+    return; 
   }
   else{ // if far enough then increment
     if(body.x < x)
@@ -166,16 +159,17 @@ void Character::moveAlongPath(){ // Incements player.pos towards next point on p
     if(body.y > y)
       body.y = body.y-speed*GetFrameTime();
   }
-  map->find(Vector2{modChunkLength(body.x),modChunkLength(body.y)})->second->setChunkType(ChunkType::unitSpace);
 }
 
 void Character::findPath(){ //A* Search path finding
+  std::cout << "Trying to find path for " << this->name << " to the point " << destinX << " " << destinY << std::endl;
+  if(map->find(Vector2{destinX,destinY})->second->getChunkType() == ChunkType::structSpace)
+    return;
   destinX = destinX/20;
   destinY = destinY/20;
   Vector2 src = Vector2{modChunkLength(body.x)/20,modChunkLength(body.y)/20};
-  if(isDestination(src.y,src.x)){ // Should never happen
+  if(isDestination(src.y,src.x))
     return;
-  }
   
   bool closedList[100][100]; // Make dynamic
   std::memset(closedList, false, sizeof(closedList));
@@ -222,6 +216,8 @@ void Character::findPath(){ //A* Search path finding
 	    cellDetails[i-1][j].parent_i = i; 
 	    cellDetails[i-1][j].parent_j = j;  
 	    setPath(cellDetails);
+	    destinX = destinX*20;
+	    destinY = destinY*20;
 	    return; 
 	  } 
 	else if (closedList[i-1][j] == false && isUnBlocked(i-1, j) == true) 
@@ -250,6 +246,8 @@ void Character::findPath(){ //A* Search path finding
 	    cellDetails[i+1][j].parent_i = i; 
 	    cellDetails[i+1][j].parent_j = j;  
 	    setPath(cellDetails);
+	    destinX = destinX*20;
+	    destinY = destinY*20;
 	    return; 
 	  } 
 	else if (closedList[i+1][j] == false && isUnBlocked(i+1, j) == true) 
@@ -278,6 +276,8 @@ void Character::findPath(){ //A* Search path finding
 	    cellDetails[i][j+1].parent_i = i; 
 	    cellDetails[i][j+1].parent_j = j;  
 	    setPath(cellDetails);
+	    destinX = destinX*20;
+	    destinY = destinY*20;
 	    return; 
 	  } 
 	else if (closedList[i][j+1] == false &&  isUnBlocked(i, j+1) == true) 
@@ -307,6 +307,8 @@ void Character::findPath(){ //A* Search path finding
 	    cellDetails[i][j-1].parent_i = i; 
 	    cellDetails[i][j-1].parent_j = j;  
 	    setPath(cellDetails);
+	    destinX = destinX*20;
+	    destinY = destinY*20;
 	    return; 
 	  } 
 	else if (closedList[i][j-1] == false && isUnBlocked(i, j-1) == true) 
@@ -337,6 +339,8 @@ void Character::findPath(){ //A* Search path finding
 	    cellDetails[i-1][j+1].parent_i = i; 
 	    cellDetails[i-1][j+1].parent_j = j;  
 	    setPath(cellDetails);
+	    destinX = destinX*20;
+	    destinY = destinY*20;
 	    return; 
 	  } 
 	else if (closedList[i-1][j+1] == false && isUnBlocked(i-1, j+1) == true && isUnBlocked(i,j+1) == true && isUnBlocked(i-1,j) == true) 
@@ -367,6 +371,8 @@ void Character::findPath(){ //A* Search path finding
 	    cellDetails[i+1][j+1].parent_i = i; 
 	    cellDetails[i+1][j+1].parent_j = j;  
 	    setPath(cellDetails);
+	    destinX = destinX*20;
+	    destinY = destinY*20;
 	    return; 
 	  } 
 	else if (closedList[i+1][j+1] == false && isUnBlocked(i+1, j+1) == true && isUnBlocked(i,j+1) == true && isUnBlocked(i+1,j) == true) 
@@ -397,6 +403,8 @@ void Character::findPath(){ //A* Search path finding
 	    cellDetails[i+1][j-1].parent_i = i; 
 	    cellDetails[i+1][j-1].parent_j = j;  
 	    setPath(cellDetails);
+	    destinX = destinX*20;
+	    destinY = destinY*20;
 	    return; 
 	  } 
 	else if (closedList[i+1][j-1] == false && isUnBlocked(i+1, j-1) == true && isUnBlocked(i,j-1) == true && isUnBlocked(i+1,j) == true) 
@@ -405,7 +413,7 @@ void Character::findPath(){ //A* Search path finding
 	    hNew = computeH(i+1, j-1); 
 	    fNew = gNew + hNew; 
 	    if (cellDetails[i+1][j-1].f == FLT_MAX || 
-		cellDetails[i+1][j-1].f > fNew) 
+		cellDetails[i+1][j-1].f > fNew) //Conference on 27th
 	      { 
 		openList.insert( std::make_pair (fNew, std::make_pair (i+1, j-1))); 
 		// Update the details of this cell 
@@ -427,6 +435,8 @@ void Character::findPath(){ //A* Search path finding
 	    cellDetails[i-1][j-1].parent_i = i; 
 	    cellDetails[i-1][j-1].parent_j = j;  
 	    setPath(cellDetails);
+	    destinX = destinX*20;
+	    destinY = destinY*20;
 	    return; 
 	  } 
 	else if (closedList[i-1][j-1] == false && isUnBlocked(i-1, j-1) == true && isUnBlocked(i,j-1) == true && isUnBlocked(i-1,j) == true) 
@@ -448,9 +458,12 @@ void Character::findPath(){ //A* Search path finding
 	  } 
       }
   }
+  destinX = destinX*20;
+  destinY = destinY*20;
 }
 
 void Character::setPath(cell cellDetails[][100]){
+  std::cout << "\n" << this->name << ": ";
   int row = destinY; 
   int col = destinX; 
   
@@ -464,13 +477,16 @@ void Character::setPath(cell cellDetails[][100]){
     col = temp_col; 
   } 
   Path.push (std::make_pair (row, col));
+  startPos = Vector2{(float)chunkLength*Path.top().second,(float)chunkLength*Path.top().first};
   Path.pop(); //Don't need to travel to starting point
   while (!Path.empty()){ 
     Pair p = Path.top();
     Vector2 temp = Vector2{(float)chunkLength*p.second,(float)chunkLength*p.first};
     this->path.push_back(temp);
+    std::cout << "(" << temp.x << " " << temp.y << ") ";
     Path.pop(); 
-  } 
+  }
+  map->find(Vector2{path.front().x,path.front().y})->second->setChunkType(ChunkType::unitSpace); //Claiming first chunk
   return; 
 }
 
@@ -525,7 +541,6 @@ void Character::deselect(){if(this->selected == true){this->selected = false; di
 void Character::draw(){DrawRectanglePro(body, Vector2{0,0},0.0f,BLACK);}
 void Character::setSpeed(float newSpeed){this->speed = newSpeed;}
 
-float Character::gety(float x){return this->m*x + this->b;}
 float Character::getHeight(){return body.height;}
 float Character::getWidth(){return body.width;}
 float Character::getX(){return body.x;}
