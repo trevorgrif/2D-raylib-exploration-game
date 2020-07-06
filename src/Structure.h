@@ -16,7 +16,7 @@ private:
 public:
   Structure(){}; //Needed to make template LL work
   Structure(Rectangle body,std::map<Vector2,Chunk*,Vec2Compare>* map,ChunkType type_oh_chunk);
-  Structure(Rectangle body,std::map<Vector2,Chunk*,Vec2Compare>* map,Color color);
+  Structure(Rectangle body,std::map<Vector2,Chunk*,Vec2Compare>* map,ChunkType type_oh_chunk, Color color);
   void draw();
   Rectangle getBody();
   int getHealth();

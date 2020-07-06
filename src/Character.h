@@ -7,7 +7,7 @@
 #include <set>
 #include <cstring>
 #include <utility>
-#include<bits/stdc++.h>
+#include <bits/stdc++.h>
 #include "Chunk.h"
 
 typedef std::pair<int,int> Pair;
@@ -23,8 +23,10 @@ class Character{
   std::map<Vector2,Chunk*,Vec2Compare>* map;
   std::list<Vector2> path;
   Camera2D* camera;
+  
   Vector2 currV;
   Vector2 startPos;
+  Vector2 mapDim;
   
   const char * name;
 
@@ -50,7 +52,7 @@ class Character{
   bool markSet{false};
   
  public:
-  Character(Rectangle Body, const char * name, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map);
+  Character(Rectangle Body, const char * name, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map,Vector2 mapDim);
   Character(){};
 
   int Vec2Quad(Vector2 v);
@@ -59,6 +61,7 @@ class Character{
   bool isDestination(int row, int col);
   bool isValid(int row, int col);
   bool isSelected();
+  bool processSuccessor(int i, int j,int newi,int newj, std::vector<std::vector<cell>> &cellDetails,  std::vector<std::vector<bool>> &closedList, std::set<pPair> &openList);
 
   float computeH(int row, int col);
   float getHeight();
@@ -66,7 +69,7 @@ class Character{
   float getX();
   float getY();
 
-  void setPath(cell cellDetails[][100]);
+  void setPath(std::vector<std::vector<cell>> &cellDetails);
   void findPath(); //A* Search Algorithm
   void updateUnit(Camera2D* camera);
   void setSpeed(float newSpeed);

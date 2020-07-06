@@ -6,11 +6,13 @@ int Character::numSelected{0};
 ChunkType Character::MCP_type{null};
 Vector2 Character::mouseClickPoint;
 //TODO: BUGS: Players stop moving as soon as BlockedChunk is clicked. Make players finish movement to current chunk alwaysss. Maybe Restructure how movement is handeled...
-Character::Character(Rectangle Body,  const char* name, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map){
+Character::Character(Rectangle Body,  const char* name, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map, Vector2 mapDim){
   this->body = Body;
   this-> name = name;
   this->camera = camera;
   this->map = map;
+  this->mapDim.x = mapDim.x;
+  this->mapDim.y = mapDim.y;
   for(int i = modChunkLength(body.x); i < modChunkLength(body.x+body.width); i = i+chunkLength){
     for(int j = modChunkLength(body.y); j < modChunkLength(body.y+body.height); j = j+chunkLength){
       map->find(Vector2{(float)i,(float)j})->second->setChunkType(unitSpace);
@@ -165,19 +167,18 @@ void Character::findPath(){ //A* Search path finding
   std::cout << "Trying to find path for " << this->name << " to the point " << destinX << " " << destinY << std::endl;
   if(map->find(Vector2{destinX,destinY})->second->getChunkType() == ChunkType::structSpace)
     return;
-  destinX = destinX/20;
-  destinY = destinY/20;
-  Vector2 src = Vector2{modChunkLength(body.x)/20,modChunkLength(body.y)/20};
+  destinX = destinX/chunkLength;
+  destinY = destinY/chunkLength;
+  Vector2 src = Vector2{modChunkLength(body.x)/chunkLength,modChunkLength(body.y)/chunkLength};
   if(isDestination(src.y,src.x))
     return;
   
-  bool closedList[100][100]; // Make dynamic
-  std::memset(closedList, false, sizeof(closedList));
-  cell cellDetails[100][100];
+  std::vector<std::vector<bool>> closedList(mapDim.y/chunkLength, std::vector<bool> (mapDim.x/chunkLength,false));
+  std::vector<std::vector<cell>> cellDetails(mapDim.y/chunkLength, std::vector<cell> (mapDim.x/chunkLength));
   int i,j;
 
-  for(i = 0; i < 100; i++){
-    for(j = 0; j < 100; j++){
+  for(i = 0; i < mapDim.y/chunkLength; i++){
+    for(j = 0; j < mapDim.x/chunkLength; j++){
       cellDetails[i][j].f = FLT_MAX;
       cellDetails[i][j].g = FLT_MAX;
       cellDetails[i][j].h = FLT_MAX;
@@ -185,6 +186,7 @@ void Character::findPath(){ //A* Search path finding
       cellDetails[i][j].parent_j = -1;
     }
   }
+
   // Initializing Source Node
   i = src.y;
   j = src.x;
@@ -196,7 +198,7 @@ void Character::findPath(){ //A* Search path finding
 
   std::set<pPair> openList;
   openList.insert(std::make_pair(0.0f,std::make_pair(i,j)));
-
+  
   while(!openList.empty()){
     pPair p = *openList.begin();
     openList.erase(openList.begin());
@@ -205,265 +207,56 @@ void Character::findPath(){ //A* Search path finding
     j = p.second.second; 
     closedList[i][j] = true;
 
-    float gNew, hNew, fNew;
-
-    //----------- 1st Successor (North) ------------  
-    if (isValid(i-1, j) == true) 
-      { 
-	if (isDestination(i-1, j) == true) 
-	  { 
-	    // Set the Parent of the destination cell 
-	    cellDetails[i-1][j].parent_i = i; 
-	    cellDetails[i-1][j].parent_j = j;  
-	    setPath(cellDetails);
-	    destinX = destinX*20;
-	    destinY = destinY*20;
-	    return; 
-	  } 
-	else if (closedList[i-1][j] == false && isUnBlocked(i-1, j) == true) 
-	  { 
-	    gNew = cellDetails[i][j].g + 1.0; 
-	    hNew = computeH (i-1, j); 
-	    fNew = gNew + hNew; 
-	    if (cellDetails[i-1][j].f == FLT_MAX || 
-		cellDetails[i-1][j].f > fNew) 
-	      { 
-		openList.insert(std::make_pair(fNew, std::make_pair(i-1,j)));  
-		cellDetails[i-1][j].f = fNew; 
-		cellDetails[i-1][j].g = gNew; 
-		cellDetails[i-1][j].h = hNew; 
-		cellDetails[i-1][j].parent_i = i; 
-		cellDetails[i-1][j].parent_j = j; 
-	      } 
-	  } 
-      }
-    //----------- 2nd Successor (South) ------------  
-    if (isValid(i+1, j) == true) 
-      { 
-	if (isDestination(i+1, j) == true) 
-	  { 
-	    // Set the Parent of the destination cell 
-	    cellDetails[i+1][j].parent_i = i; 
-	    cellDetails[i+1][j].parent_j = j;  
-	    setPath(cellDetails);
-	    destinX = destinX*20;
-	    destinY = destinY*20;
-	    return; 
-	  } 
-	else if (closedList[i+1][j] == false && isUnBlocked(i+1, j) == true) 
-	  { 
-	    gNew = cellDetails[i][j].g + 1.0; 
-	    hNew = computeH (i+1, j); 
-	    fNew = gNew + hNew; 
-	    if (cellDetails[i+1][j].f == FLT_MAX || 
-		cellDetails[i+1][j].f > fNew) 
-	      { 
-		openList.insert(std::make_pair(fNew, std::make_pair(i+1,j)));  
-		cellDetails[i+1][j].f = fNew; 
-		cellDetails[i+1][j].g = gNew; 
-		cellDetails[i+1][j].h = hNew; 
-		cellDetails[i+1][j].parent_i = i; 
-		cellDetails[i+1][j].parent_j = j; 
-	      } 
-	  } 
-      }
-    //----------- 3rd Successor (East) ------------  
-    if (isValid(i, j+1) == true) 
-      { 
-	if (isDestination(i, j+1) == true) 
-	  { 
-	    // Set the Parent of the destination cell 
-	    cellDetails[i][j+1].parent_i = i; 
-	    cellDetails[i][j+1].parent_j = j;  
-	    setPath(cellDetails);
-	    destinX = destinX*20;
-	    destinY = destinY*20;
-	    return; 
-	  } 
-	else if (closedList[i][j+1] == false &&  isUnBlocked(i, j+1) == true) 
-	  { 
-	    gNew = cellDetails[i][j].g + 1.0; 
-	    hNew = computeH (i, j+1); 
-	    fNew = gNew + hNew; 
-	    if (cellDetails[i][j+1].f == FLT_MAX || 
-		cellDetails[i][j+1].f > fNew) 
-	      { 
-		openList.insert(std::make_pair(fNew, std::make_pair(i,j+1)));  
-		cellDetails[i][j+1].f = fNew; 
-		cellDetails[i][j+1].g = gNew; 
-		cellDetails[i][j+1].h = hNew; 
-		cellDetails[i][j+1].parent_i = i; 
-		cellDetails[i][j+1].parent_j = j; 
-	      } 
-	  } 
-      }
-    //----------- 4th Successor (West) ------------ 
-    // Only process this cell if this is a valid one 
-    if (isValid(i, j-1) == true) 
-      { 
-	if (isDestination(i, j-1) == true) 
-	  { 
-	    // Set the Parent of the destination cell 
-	    cellDetails[i][j-1].parent_i = i; 
-	    cellDetails[i][j-1].parent_j = j;  
-	    setPath(cellDetails);
-	    destinX = destinX*20;
-	    destinY = destinY*20;
-	    return; 
-	  } 
-	else if (closedList[i][j-1] == false && isUnBlocked(i, j-1) == true) 
-	  { 
-	    gNew = cellDetails[i][j].g + 1.0; 
-	    hNew = computeH(i, j-1); 
-	    fNew = gNew + hNew; 
-	    if (cellDetails[i][j-1].f == FLT_MAX || 
-		cellDetails[i][j-1].f > fNew) 
-	      { 
-		openList.insert( std::make_pair (fNew, std::make_pair (i, j-1))); 
-		// Update the details of this cell 
-		cellDetails[i][j-1].f = fNew; 
-		cellDetails[i][j-1].g = gNew; 
-		cellDetails[i][j-1].h = hNew; 
-		cellDetails[i][j-1].parent_i = i; 
-		cellDetails[i][j-1].parent_j = j; 
-	      } 
-	  } 
-      }
-    //----------- 5th Successor (NE) ------------ 
-    // Only process this cell if this is a valid one 
-    if (isValid(i-1, j+1) == true) 
-      { 
-	if (isDestination(i-1, j+1) == true && isUnBlocked(i,j+1) == true && isUnBlocked(i-1,j) == true) 
-	  { 
-	    // Set the Parent of the destination cell 
-	    cellDetails[i-1][j+1].parent_i = i; 
-	    cellDetails[i-1][j+1].parent_j = j;  
-	    setPath(cellDetails);
-	    destinX = destinX*20;
-	    destinY = destinY*20;
-	    return; 
-	  } 
-	else if (closedList[i-1][j+1] == false && isUnBlocked(i-1, j+1) == true && isUnBlocked(i,j+1) == true && isUnBlocked(i-1,j) == true) 
-	  { 
-	    gNew = cellDetails[i][j].g + 1.0; 
-	    hNew = computeH(i-1, j+1); 
-	    fNew = gNew + hNew; 
-	    if (cellDetails[i-1][j+1].f == FLT_MAX || 
-		cellDetails[i-1][j+1].f > fNew) 
-	      { 
-		openList.insert( std::make_pair (fNew, std::make_pair (i-1, j+1))); 
-		// Update the details of this cell 
-		cellDetails[i-1][j+1].f = fNew; 
-		cellDetails[i-1][j+1].g = gNew; 
-		cellDetails[i-1][j+1].h = hNew; 
-		cellDetails[i-1][j+1].parent_i = i; 
-		cellDetails[i-1][j+1].parent_j = j; 
-	      } 
-	  } 
-      }
-    //----------- 6th Successor (SE) ------------ 
-    // Only process this cell if this is a valid one 
-    if (isValid(i+1, j+1) == true) 
-      { 
-	if (isDestination(i+1, j+1) == true && isUnBlocked(i,j+1) == true && isUnBlocked(i+1,j) == true) 
-	  { 
-	    // Set the Parent of the destination cell 
-	    cellDetails[i+1][j+1].parent_i = i; 
-	    cellDetails[i+1][j+1].parent_j = j;  
-	    setPath(cellDetails);
-	    destinX = destinX*20;
-	    destinY = destinY*20;
-	    return; 
-	  } 
-	else if (closedList[i+1][j+1] == false && isUnBlocked(i+1, j+1) == true && isUnBlocked(i,j+1) == true && isUnBlocked(i+1,j) == true) 
-	  { 
-	    gNew = cellDetails[i][j].g + 1.0; 
-	    hNew = computeH(i+1, j+1); 
-	    fNew = gNew + hNew; 
-	    if (cellDetails[i+1][j+1].f == FLT_MAX || 
-		cellDetails[i+1][j+1].f > fNew) 
-	      { 
-		openList.insert( std::make_pair (fNew, std::make_pair (i+1, j+1))); 
-		// Update the details of this cell 
-		cellDetails[i+1][j+1].f = fNew; 
-		cellDetails[i+1][j+1].g = gNew; 
-		cellDetails[i+1][j+1].h = hNew; 
-		cellDetails[i+1][j+1].parent_i = i; 
-		cellDetails[i+1][j+1].parent_j = j; 
-	      } 
-	  } 
-      }
-    //----------- 7th Successor (SW) ------------ 
-    // Only process this cell if this is a valid one 
-    if (isValid(i+1, j-1) == true) 
-      { 
-	if (isDestination(i+1, j-1) == true && isUnBlocked(i,j-1) == true && isUnBlocked(i+1,j) == true) 
-	  { 
-	    // Set the Parent of the destination cell 
-	    cellDetails[i+1][j-1].parent_i = i; 
-	    cellDetails[i+1][j-1].parent_j = j;  
-	    setPath(cellDetails);
-	    destinX = destinX*20;
-	    destinY = destinY*20;
-	    return; 
-	  } 
-	else if (closedList[i+1][j-1] == false && isUnBlocked(i+1, j-1) == true && isUnBlocked(i,j-1) == true && isUnBlocked(i+1,j) == true) 
-	  { 
-	    gNew = cellDetails[i][j].g + 1.0; 
-	    hNew = computeH(i+1, j-1); 
-	    fNew = gNew + hNew; 
-	    if (cellDetails[i+1][j-1].f == FLT_MAX || 
-		cellDetails[i+1][j-1].f > fNew) //Conference on 27th
-	      { 
-		openList.insert( std::make_pair (fNew, std::make_pair (i+1, j-1))); 
-		// Update the details of this cell 
-		cellDetails[i+1][j-1].f = fNew; 
-		cellDetails[i+1][j-1].g = gNew; 
-		cellDetails[i+1][j-1].h = hNew; 
-		cellDetails[i+1][j-1].parent_i = i; 
-		cellDetails[i+1][j-1].parent_j = j; 
-	      } 
-	  } 
-      }
-    //----------- 8th Successor (NW) ------------ 
-    // Only process this cell if this is a valid one 
-    if (isValid(i-1, j-1) == true) 
-      { 
-	if (isDestination(i-1, j-1) == true && isUnBlocked(i,j-1) == true && isUnBlocked(i-1,j) == true) 
-	  { 
-	    // Set the Parent of the destination cell 
-	    cellDetails[i-1][j-1].parent_i = i; 
-	    cellDetails[i-1][j-1].parent_j = j;  
-	    setPath(cellDetails);
-	    destinX = destinX*20;
-	    destinY = destinY*20;
-	    return; 
-	  } 
-	else if (closedList[i-1][j-1] == false && isUnBlocked(i-1, j-1) == true && isUnBlocked(i,j-1) == true && isUnBlocked(i-1,j) == true) 
-	  { 
-	    gNew = cellDetails[i][j].g + 1.0; 
-	    hNew = computeH(i-1, j-1); 
-	    fNew = gNew + hNew; 
-	    if (cellDetails[i-1][j-1].f == FLT_MAX || 
-		cellDetails[i-1][j-1].f > fNew) 
-	      { 
-		openList.insert( std::make_pair (fNew, std::make_pair (i-1, j-1))); 
-		// Update the details of this cell 
-		cellDetails[i-1][j-1].f = fNew; 
-		cellDetails[i-1][j-1].g = gNew; 
-		cellDetails[i-1][j-1].h = hNew; 
-		cellDetails[i-1][j-1].parent_i = i; 
-		cellDetails[i-1][j-1].parent_j = j; 
-	      } 
-	  } 
-      }
+    // Checking Succesors
+    if(processSuccessor(i,j,i-1,j,cellDetails,closedList,openList))
+      return;
+    if(processSuccessor(i,j,i+1,j,cellDetails,closedList,openList))
+      return;  
+    if(processSuccessor(i,j,i,j+1,cellDetails,closedList,openList))
+      return; 
+    if(processSuccessor(i,j,i,j-1,cellDetails,closedList,openList))
+      return;
+    if(processSuccessor(i,j,i-1,j+1,cellDetails,closedList,openList))
+      return;
+    if(processSuccessor(i,j,i+1,j+1,cellDetails,closedList,openList))
+      return;
+    if(processSuccessor(i,j,i+1,j-1,cellDetails,closedList,openList))
+      return;
+    if(processSuccessor(i,j,i-1,j-1,cellDetails,closedList,openList))
+      return;
   }
-  destinX = destinX*20;
-  destinY = destinY*20;
+  destinX = destinX*chunkLength;
+  destinY = destinY*chunkLength;
 }
 
-void Character::setPath(cell cellDetails[][100]){
-  std::cout << "\n" << this->name << ": ";
+bool Character::processSuccessor(int i, int j, int newi, int newj, std::vector<std::vector<cell>> &cellDetails,  std::vector<std::vector<bool>> &closedList, std::set<pPair> &openList){
+  if(isValid(newi, newj) == true){ 
+      if(isDestination(newi, newj) == true && isUnBlocked(i,newj) == true && isUnBlocked(newi,j) == true){  
+	  cellDetails[newi][newj].parent_i = i; 
+	  cellDetails[newi][newj].parent_j = j;  
+	  setPath(cellDetails);
+	  destinX = destinX*chunkLength;
+	  destinY = destinY*chunkLength;
+	  return true; 
+	} 
+      else if(closedList[newi][newj] == false && isUnBlocked(newi, newj) == true && isUnBlocked(i,newj) == true && isUnBlocked(newi,j) == true){ 
+	  float gNew = cellDetails[i][j].g + 1.0; 
+	  float hNew = computeH(newi, newj); 
+	  float fNew = gNew + hNew; 
+	  if(cellDetails[newi][newj].f == FLT_MAX || cellDetails[newi][newj].f > fNew) { 
+	      openList.insert( std::make_pair (fNew, std::make_pair (newi, newj)));  
+	      cellDetails[newi][newj].f = fNew; 
+	      cellDetails[newi][newj].g = gNew; 
+	      cellDetails[newi][newj].h = hNew; 
+	      cellDetails[newi][newj].parent_i = i; 
+	      cellDetails[newi][newj].parent_j = j; 
+	    } 
+	} 
+    }
+  return false;
+}
+void Character::setPath(std::vector<std::vector<cell>> &cellDetails){
+  std::cout << this->name << ": ";
   int row = destinY; 
   int col = destinX; 
   
@@ -487,6 +280,7 @@ void Character::setPath(cell cellDetails[][100]){
     Path.pop(); 
   }
   map->find(Vector2{path.front().x,path.front().y})->second->setChunkType(ChunkType::unitSpace); //Claiming first chunk
+  std::cout << std::endl;
   return; 
 }
 
@@ -528,7 +322,7 @@ bool Character::isDestination(int row, int col){
   return false;
 }
 
-bool Character::isValid(int row, int col){return   (row >= 0) && (row < 100) && (col >= 0) && (col < 100);}
+bool Character::isValid(int row, int col){return   (row >= 0) && (row < mapDim.y/chunkLength) && (col >= 0) && (col < mapDim.x/chunkLength);}
 
 float Character::computeH(int row, int col){
   return (float)sqrt((row-destinY)*(row-destinY) + (col-destinX)*(col-destinX));

@@ -24,7 +24,8 @@ void Chunk::draw(){
     DrawRectangleLinesEx(this->body, 1, RED);
     break;
   case ChunkType::borderSpace:
-    DrawRectangleLinesEx(this->body,1, BLUE);
+    this->setColor(BLACK);
+    DrawRectangleLinesEx(this->body,1, BLACK);
     break;
   case ChunkType::null:
     DrawRectangleLinesEx(this->body, 1, BLACK);

@@ -158,44 +158,33 @@ void CameraUpdate(Camera2D* camera){
 
 void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* sceneElements,std::map<int,Character*>* unitTable, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map){
   //Build Map
-  for(int i = 0; i <= mapWidth-chunkLength; i = i+chunkLength){
-    for(int j = 0; j <= mapHeight-chunkLength; j = j+chunkLength){
+  for(int i = -1*chunkLength; i <= mapWidth; i = i+chunkLength){
+    for(int j = -1*chunkLength; j <= mapHeight; j = j+chunkLength){
       map->insert(std::pair<Vector2, Chunk*>{Vector2{(float)i,(float)j}, new Chunk(Rectangle{(float)i,(float)j,chunkLength,chunkLength})});
     }
   }
-  /*
+  
   // Load Scene Elements (Border)
   for(int i = -1*chunkLength; i <= mapWidth; i = i+chunkLength){
-    Structure* temp = new Structure(Rectangle{i,-1*chunkLength,chunkLength,chunkLength},map,ChunkType::borderSpace);
-    sceneElements->insert({getInt(),temp});
-    }*/
-  
+    sceneElements->insert({getInt(),new Structure(Rectangle{(float)i,-1*chunkLength,chunkLength,chunkLength},map,ChunkType::borderSpace, BLACK)});
+    sceneElements->insert({getInt(),new Structure(Rectangle{(float)i,mapHeight,chunkLength,chunkLength},map,ChunkType::borderSpace, BLACK)});
+  }
+  for(int i = 0; i <= mapHeight-chunkLength; i = i+chunkLength){
+    sceneElements->insert({getInt(),new Structure(Rectangle{-1*chunkLength,(float)i,chunkLength,chunkLength},map,ChunkType::borderSpace, BLACK)});
+    sceneElements->insert({getInt(),new Structure(Rectangle{mapWidth,(float)i,chunkLength,chunkLength},map,ChunkType::borderSpace, BLACK)});
+  }
+    
   //load bldgTable 
-  Structure* b1 = new Structure(Rectangle{3*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map,ChunkType::structSpace);
-  Structure* b2 = new Structure(Rectangle{92*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map,ChunkType::structSpace);
+  bldgTable->insert({getInt(),new Structure(Rectangle{3*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map,ChunkType::structSpace)});
+  bldgTable->insert({getInt(),new Structure(Rectangle{92*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map,ChunkType::structSpace)});
 
-  bldgTable->insert({getInt(),b1});
-  bldgTable->insert({getInt(),b2});
-
-  //load sceneElements
-  /*Structure* Border = new Structure(Rectangle{0,0,mapWidth,mapHeight},map); //Border might end up being useless if movement depends on map path finding
-  Border->setFill(false);
-  Border->setColor(BLACK);
-  sceneElements->insert({getInt(),Border});*/
-  //Boder Cant be a Structure type
+  //load UnitTable
+  for(int i = 0; i < mapWidth-40; i = i+2*chunkLength){
+    for(int j= chunkLength; j <= chunkLength;j = j+40){
+      unitTable->insert({getInt(),new Character(Rectangle{(float)i,(float)j,20,20},"NULL",camera,map,Vector2{mapWidth,mapHeight})});
+    }
+  }
   
-  //load unitTable
-  Rectangle pBody = {chunkLength,chunkLength,chunkLength,chunkLength}; // TODO: Implement movement for larger units
-  Character* player = new Character(pBody,"Player 1",camera,map);
-  unitTable->insert({getInt(),player});
-  
-  Rectangle pBody2 = {4*chunkLength,chunkLength,chunkLength,chunkLength};
-  Character* player2 = new Character(pBody2,"Player 2",camera,map);
-  unitTable->insert({getInt(),player2});
-
-  Rectangle pBody3 = {7*chunkLength,chunkLength,chunkLength,chunkLength};
-  Character* player3 = new Character(pBody3,"Player 3",camera,map);
-  unitTable->insert({getInt(),player3});
 }
 
 

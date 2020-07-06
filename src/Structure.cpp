@@ -11,13 +11,13 @@ Structure::Structure(Rectangle body,std::map<Vector2,Chunk*,Vec2Compare>* map,Ch
   }
 }
 
-Structure::Structure(Rectangle body, std::map<Vector2,Chunk*,Vec2Compare>* map, Color color){
+Structure::Structure(Rectangle body, std::map<Vector2,Chunk*,Vec2Compare>* map,ChunkType type_oh_chunk, Color color){
   this->body = body;
   this->color = color;
   this->map = map;
-  for(int x = this->body.x; x <= this->body.x + this->body.width; x = x+20){
-    for(int y = this->body.y; y <= this->body.y + this->body.height; y = y+20){
-      this->map->at(Vector2{(float)x,(float)y})->setBlocked(true);
+  for(int i = modChunkLength(body.x); i < modChunkLength(body.x+body.width); i = i+chunkLength){
+    for(int j = modChunkLength(body.y); j < modChunkLength(body.y + body.height); j = j+chunkLength){
+      map->find(Vector2{(float)i,(float)j})->second->setChunkType(type_oh_chunk);
     }
   }
 }
