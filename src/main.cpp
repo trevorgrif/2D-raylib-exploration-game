@@ -14,7 +14,7 @@ float screenHeight;
 
 //Temporary Hard Coded Map dimenisons, should be extracted form file and dynamically changed in MM
 float mapWidth{2000};
-float mapHeight{2000};
+float mapHeight{1000};
 
 int MrKey{0};
 //NOTE: For player movement, intial click should return closest possible position on map, if structure is built along the jouney which blocks the path then unit should recalculate path after it realizes original path has been obstructed (Everytime player moves along the path it should check if chunk is blocked) 
@@ -163,11 +163,17 @@ void initMap(std::map<int,Structure*>* bldgTable,std::map<int,Structure*>* scene
       map->insert(std::pair<Vector2, Chunk*>{Vector2{(float)i,(float)j}, new Chunk(Rectangle{(float)i,(float)j,chunkLength,chunkLength})});
     }
   }
-
-  //load bldgTable 
-  Structure* b1 = new Structure(Rectangle{3*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map);
-  Structure* b2 = new Structure(Rectangle{92*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map);
+  /*
+  // Load Scene Elements (Border)
+  for(int i = -1*chunkLength; i <= mapWidth; i = i+chunkLength){
+    Structure* temp = new Structure(Rectangle{i,-1*chunkLength,chunkLength,chunkLength},map,ChunkType::borderSpace);
+    sceneElements->insert({getInt(),temp});
+    }*/
   
+  //load bldgTable 
+  Structure* b1 = new Structure(Rectangle{3*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map,ChunkType::structSpace);
+  Structure* b2 = new Structure(Rectangle{92*chunkLength,20*chunkLength,5*chunkLength,12*chunkLength},map,ChunkType::structSpace);
+
   bldgTable->insert({getInt(),b1});
   bldgTable->insert({getInt(),b2});
 

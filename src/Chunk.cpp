@@ -14,17 +14,20 @@ void Chunk::setChunkType(ChunkType newType){
 
 void Chunk::draw(){
   switch(this->chunk_type){
-    case ChunkType::unitSpace:
-      DrawRectangleLinesEx(this->body, 1, PURPLE);
-      break;
-    case ChunkType::freeSpace:
-      DrawRectangleLinesEx(this->body, 1, GREEN);
-      break;
-    case ChunkType::structSpace:
-      DrawRectangleLinesEx(this->body, 1, RED);
-      break;
-    case ChunkType::null:
-      DrawRectangleLinesEx(this->body, 1, BLACK);
-      break;
+  case ChunkType::unitSpace:
+    DrawRectangleLinesEx(this->body, 1, PURPLE);
+    break;
+  case ChunkType::freeSpace:
+    DrawRectangleLinesEx(this->body, 1, GREEN);
+    break;
+  case ChunkType::structSpace:
+    DrawRectangleLinesEx(this->body, 1, RED);
+    break;
+  case ChunkType::borderSpace:
+    DrawRectangleLinesEx(this->body,1, BLUE);
+    break;
+  case ChunkType::null:
+    DrawRectangleLinesEx(this->body, 1, BLACK);
+    break;
   };
 }

@@ -3,7 +3,7 @@
 #include <iostream>
 #include "raylib.h"
 
-enum ChunkType{unitSpace,freeSpace,structSpace,null};
+enum ChunkType{unitSpace,freeSpace,structSpace,borderSpace,null};
 
 extern float chunkLength;
 extern float modChunkLength(float x);

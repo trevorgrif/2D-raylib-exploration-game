@@ -1,12 +1,12 @@
 #include "Structure.h"
 
-Structure::Structure(Rectangle body,std::map<Vector2,Chunk*,Vec2Compare>* map){
+Structure::Structure(Rectangle body,std::map<Vector2,Chunk*,Vec2Compare>* map,ChunkType type_oh_chunk){
   this->body = body;
   this->map = map;
   
   for(int i = modChunkLength(body.x); i < modChunkLength(body.x+body.width); i = i+chunkLength){
     for(int j = modChunkLength(body.y); j < modChunkLength(body.y + body.height); j = j+chunkLength){
-      map->find(Vector2{(float)i,(float)j})->second->setChunkType(structSpace);
+      map->find(Vector2{(float)i,(float)j})->second->setChunkType(type_oh_chunk);
     }
   }
 }
