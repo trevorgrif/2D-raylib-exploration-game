@@ -1,0 +1,16 @@
+List of task to be completed:
+
+ - Build team class
+ - Build bullet class
+   + Implement into character class for character stats
+ - Add visual indication that a unit is selected
+ - Improve movement when multiple units selected
+ - Make button class less ugly
+ - Improve main menu aesthic
+   + options tab
+     ++ Settings file to be changed
+     ++ Key binding support (cause why not)
+   + Close game button
+ - Map generation (If only I knew somebody...)
+ 
+   

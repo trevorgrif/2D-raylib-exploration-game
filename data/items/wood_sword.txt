@@ -1,0 +1,4 @@
+Wood Sword
+textures/items/wood_sword.png
+10
+10

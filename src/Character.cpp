@@ -3,24 +3,42 @@
 #include <math.h>
 
 int Character::numSelected{0};
-ChunkType Character::MCP_type{null};
+BlockType Character::MCP_type{Undefined};
 Vector2 Character::mouseClickPoint;
-//TODO: BUGS: Players stop moving as soon as BlockedChunk is clicked. Make players finish movement to current chunk alwaysss. Maybe Restructure how movement is handeled...
-Character::Character(Rectangle Body,  const char* name, Camera2D* camera, std::map<Vector2,Chunk*,Vec2Compare>* map, Vector2 mapDim){
+
+Character::Character(Rectangle Body,  const char* name, Camera2D* camera, ProcMap* map, std::map<std::string,Item>* itemTable){
   this->body = Body;
-  this-> name = name;
+  this->name = name;
   this->camera = camera;
   this->map = map;
-  this->mapDim.x = mapDim.x;
-  this->mapDim.y = mapDim.y;
-  for(int i = modChunkLength(body.x); i < modChunkLength(body.x+body.width); i = i+chunkLength){
-    for(int j = modChunkLength(body.y); j < modChunkLength(body.y+body.height); j = j+chunkLength){
-      map->find(Vector2{(float)i,(float)j})->second->setChunkType(unitSpace);
-    }
+  this->startPos.x = this->body.x;
+  this->startPos.y = this->body.y;
+  this->select();
+  this->AvatarSkin = LoadTexture("textures/player/avatar.png"); //Careful of this if ever loading multiple characters
+  this->itemTable = itemTable;
+  
+}
+
+Character::Character(Rectangle Body,  const char* name, Camera2D* camera, ProcMap* map, std::map<std::string,Item>* itemTable, std::string NameArr[10]){
+  this->body = Body;
+  this->name = name;
+  this->camera = camera;
+  this->map = map;
+  this->startPos.x = this->body.x;
+  this->startPos.y = this->body.y;
+  this->select();
+  this->AvatarSkin = LoadTexture("textures/player/avatar.png"); //Careful of this if ever loading multiple characters
+  this->itemTable = itemTable;
+  for(int i = 0; i <= 9; i++){
+    if(NameArr[i] != "")
+      Inven->AddItem(itemTable->find(NameArr[i])->second,i);
   }
 }
 
 void Character::updateUnit(Camera2D* camera){ // Interprets mouse action and updates unit accordingly
+  Vector2 destin;
+  Vector2 MCP;
+  
   currV = GetMousePosition();
   switch(markSet){
   case false: 
@@ -32,7 +50,7 @@ void Character::updateUnit(Camera2D* camera){ // Interprets mouse action and upd
     break;
   case true:
     if(!regionActive){
-      if(abs(x_init-currV.x) > 2*chunkLength || abs(y_init- currV.y) > 2*chunkLength){
+      if(abs(x_init-currV.x) > 2*blockLength || abs(y_init- currV.y) > 2*blockLength){
 	regionActive = true;
       }
     }
@@ -44,19 +62,19 @@ void Character::updateUnit(Camera2D* camera){ // Interprets mouse action and upd
 	switch(Vec2Quad(Vector2{currV.x-x_init,currV.y-y_init})){
 	case 1:
 	  region = Rectangle{(float)x_init, (float)y_init, currV.x - x_init, currV.y - y_init};
-	  DrawRectangleLinesEx(region,(int)(chunkLength/5), BLACK);
+	  DrawRectangleLinesEx(region,(int)(blockLength/5), BLACK);
 	  break;
 	case 2:
 	  region = Rectangle{currV.x, (float)y_init, x_init-currV.x, currV.y-y_init};
-	  DrawRectangleLinesEx(region ,(int)(chunkLength/5), BLACK);
+	  DrawRectangleLinesEx(region ,(int)(blockLength/5), BLACK);
 	  break;
 	case 3:
 	  region = Rectangle{currV.x, currV.y, x_init-currV.x, y_init-currV.y}; 
-	  DrawRectangleLinesEx(region ,(int)(chunkLength/5), BLACK);
+	  DrawRectangleLinesEx(region ,(int)(blockLength/5), BLACK);
 	  break;
 	case 4:
 	  region = Rectangle{(float)x_init, currV.y, currV.x-x_init, y_init-currV.y};
-	  DrawRectangleLinesEx(region ,(int)(chunkLength/5), BLACK);
+	  DrawRectangleLinesEx(region ,(int)(blockLength/5), BLACK);
 	  break;
 	};
       }
@@ -71,83 +89,78 @@ void Character::updateUnit(Camera2D* camera){ // Interprets mouse action and upd
 	this->select();
       }
     }
-    else if(markSet == true && regionActive == false){ // Click Detection
+    else if(markSet == true && regionActive == false){ // Click Detection 
       Vector2 mPos = GetScreenToWorld2D(currV,*camera);
-      mouseClickPoint.x = mPos.x;
-      mouseClickPoint.y = mPos.y;
-      analyzeMCP();
-      if(MCP_type == unitSpace){
-	Chunk* chunk = map->find(Vector2{modChunkLength(mouseClickPoint.x),modChunkLength(mouseClickPoint.y)})->second;
-	if(chunk->getRect().x == modChunkLength(getX()) && chunk->getRect().y == modChunkLength(getY()))
-	  this->select();
-	MCP_type = null;
-      }
-      else if(MCP_type == freeSpace || MCP_type == structSpace){ // Find closest actual free space pos. //TODO: Fix structSpace so that sceneSpaces are clickable later
-	if(this->selected == true){
-	  mPos = GetScreenToWorld2D(GetMousePosition(),*camera);
-	  destinX = mPos.x;
-	  destinY = mPos.y;
-	  if(path.size()){
-	    map->find(Vector2{path.front().x,path.front().y})->second->setChunkType(ChunkType::freeSpace);
-	    map->find(Vector2{startPos.x,startPos.y})->second->setChunkType(ChunkType::freeSpace);
-	  }
-	  findNearestFreeChunk();
-	}
-	MCP_type = null;
-      }
+      MCP.x = modBlockLength(mPos.x);
+      MCP.y = modBlockLength(mPos.y);
+      analyzeMCP(MCP);
+   
+      destin.x = modBlockLength(MCP.x); // Setting the destination vector
+      destin.y = modBlockLength(MCP.y);
+
+      findNearestFreeBlock(destin); // Path finding
+      findPath(destin);
+	
+      MCP_type = Undefined;
     }  
     markSet = false;
     regionActive = false;
   }
-  if(IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)){ // Check for deselect request
+  /*if(IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)){ // Check for deselect request 
     if(this->selected == true)
-      this->deselect();
-  }
+      //this->deselect();
+      }*/
   if(path.size())
-    moveAlongPath();
+    moveAlongPath(destin);
+  KeyPressAnalysis();
 }
 
-void Character::findNearestFreeChunk(){ // Finds nearest open space and sets destinX and destinY to that location
-  while(path.size() && map->find(Vector2{path.back().x,path.back().y})->second->isBlocked() == true){ 
+void Character::findNearestFreeBlock(Vector2 &destin){ // Finds nearest open space and sets destin.x and destin.y to that location
+  /*while(path.size() && map->map->find(Vector2{path.back().x,path.back().y})->second->isBlocked() == true){ 
     if(path.size() == 1){
-      destinX = body.x;
-      destinY = body.y;
+      destin.x = body.x;
+      destin.y = body.y;
       path.pop_back();
     }
     else{
       path.pop_back();
-      destinX = path.back().x;
-      destinY = path.back().y;
+      destin.x = path.back().x;
+      destin.y = path.back().y;
     }
-  }
-  destinX = modChunkLength(destinX);
-  destinY = modChunkLength(destinY);
+    }*/
   path.clear();
-  findPath();
 }
 
-void Character::moveAlongPath(){ // Increments player.pos towards next point on path
+void Character::moveAlongPath(Vector2 &destin){ // Increments player.pos towards next point on path
   Vector2 nextPoint = path.front();
   float x = nextPoint.x;
   float y = nextPoint.y;
+
+  if(body.x - x < 0){
+    Direction = 0;
+  }
+  else if(body.x - x > 0){
+    Direction = 1;
+  }
  
-  if(abs(body.x-x) <= speed*GetFrameTime() && abs(body.y-y) <= speed*GetFrameTime()) // If about to arrive
-    map->find(Vector2{startPos.x,startPos.y})->second->setChunkType(ChunkType::freeSpace); // Free old chunk
+  //if(abs(body.x-x) <= speed*GetFrameTime() && abs(body.y-y) <= speed*GetFrameTime()) // If about to arrive
+  //map->map->find(Vector2{startPos.x,startPos.y})->second->setBlockType(BlockType::freeSpace); // Free old block
   if(abs(body.x-x) <= speed*GetFrameTime()) //if close enough then set equal and stop moving"
     body.x = x;
   if(abs(body.y-y) <= speed*GetFrameTime())
     body.y = y;
-  if(body.y == y && body.x == x){
+  if(body.y == y && body.x == x){ // Arriving on a block
     startPos = Vector2{path.front().x,path.front().y};
     path.pop_front();
-    if(path.size()){
-      if(map->find(Vector2{path.front().x,path.front().y})->second->isBlocked() == true){// If path is obstructed along the journey then find new path
+    if(path.size()){ // Just arrived and still moving check if next block space is blocked. If blocked reroute, if not claim next space
+      if(map->map->find(Vector2{path.front().x,path.front().y})->second->isBlocked() == true){// If path is obstructed along the journey then find new path
 	std::cout << this->name << " path is obstructed at " << path.front().x << " " << path.front().y << std::endl;
-	findNearestFreeChunk();
+	findNearestFreeBlock(destin);
+	findPath(destin);
       }
-      if(map->find(Vector2{path.front().x,path.front().y})->second->isBlocked() == false && path.size()){
-	map->find(Vector2{path.front().x,path.front().y})->second->setChunkType(ChunkType::unitSpace);
-      }
+      /*if(map->map->find(Vector2{path.front().x,path.front().y})->second->isBlocked() == false && path.size()){
+	map->map->find(Vector2{path.front().x,path.front().y})->second->setBlockType(BlockType::unitSpace);
+	}*/
     }
     return; 
   }
@@ -163,22 +176,35 @@ void Character::moveAlongPath(){ // Increments player.pos towards next point on 
   }
 }
 
-void Character::findPath(){ //A* Search path finding
-  std::cout << "Trying to find path for " << this->name << " to the point " << destinX << " " << destinY << std::endl;
-  if(map->find(Vector2{destinX,destinY})->second->getChunkType() == ChunkType::structSpace)
+void Character::findPath(Vector2 destin){ //A* Search path finding
+  int dispX, dispY;
+
+  //May be useful later but undefined right now
+  /*if(map->map->find(Vector2{destin.x,destin.y})->second->getBlockType() == BlockType::structSpace){ 
+    std::cout << "It's a structure\n";
     return;
-  destinX = destinX/chunkLength;
-  destinY = destinY/chunkLength;
-  Vector2 src = Vector2{modChunkLength(body.x)/chunkLength,modChunkLength(body.y)/chunkLength};
-  if(isDestination(src.y,src.x))
-    return;
+    }*/
+
+  //Determine the Destination Point on the Relative Grid
+  destin.x = destin.x/blockLength;
+  destin.y = destin.y/blockLength;
+
   
-  std::vector<std::vector<bool>> closedList(mapDim.y/chunkLength, std::vector<bool> (mapDim.x/chunkLength,false));
-  std::vector<std::vector<cell>> cellDetails(mapDim.y/chunkLength, std::vector<cell> (mapDim.x/chunkLength));
+  Vector2 src = Vector2{modBlockLength(body.x)/blockLength,modBlockLength(body.y)/blockLength};
+  if(isDestination(src.y,src.x,destin)){
+    std::cout << "Already at Destination\n";
+    return;
+  }
+    
+  int SearchRegWidth = abs(destin.x - src.x) + RelativeGridDim;
+  int SearchRegHeight = abs(destin.y - src.y) + RelativeGridDim;
+  
+  std::vector<std::vector<bool>> closedList(SearchRegHeight, std::vector<bool> (SearchRegWidth,false));
+  std::vector<std::vector<cell>> cellDetails(SearchRegHeight, std::vector<cell> (SearchRegWidth));
   int i,j;
 
-  for(i = 0; i < mapDim.y/chunkLength; i++){
-    for(j = 0; j < mapDim.x/chunkLength; j++){
+  for(i = 0; i < SearchRegHeight; i++){
+    for(j = 0; j < SearchRegWidth; j++){
       cellDetails[i][j].f = FLT_MAX;
       cellDetails[i][j].g = FLT_MAX;
       cellDetails[i][j].h = FLT_MAX;
@@ -186,10 +212,11 @@ void Character::findPath(){ //A* Search path finding
       cellDetails[i][j].parent_j = -1;
     }
   }
-
-  // Initializing Source Node
-  i = src.y;
-  j = src.x;
+  std::cout << "\nStarting Point: " << src.x << " " << src.y << std::endl;
+  std::cout << "Destination Point: " << destin.x << " " << destin.y << std::endl;
+  // Initializing Source Node AND converting to new relative grid
+  ActualToRelative(i,j,dispX,dispY,destin,src);
+  
   cellDetails[i][j].f = 0;
   cellDetails[i][j].g = 0;
   cellDetails[i][j].h = 0;
@@ -204,91 +231,176 @@ void Character::findPath(){ //A* Search path finding
     openList.erase(openList.begin());
 
     i = p.second.first; 
-    j = p.second.second; 
+    j = p.second.second;
     closedList[i][j] = true;
-
     // Checking Succesors
-    if(processSuccessor(i,j,i-1,j,cellDetails,closedList,openList))
-      return;
-    if(processSuccessor(i,j,i+1,j,cellDetails,closedList,openList))
-      return;  
-    if(processSuccessor(i,j,i,j+1,cellDetails,closedList,openList))
-      return; 
-    if(processSuccessor(i,j,i,j-1,cellDetails,closedList,openList))
-      return;
-    if(processSuccessor(i,j,i-1,j+1,cellDetails,closedList,openList))
-      return;
-    if(processSuccessor(i,j,i+1,j+1,cellDetails,closedList,openList))
-      return;
-    if(processSuccessor(i,j,i+1,j-1,cellDetails,closedList,openList))
-      return;
-    if(processSuccessor(i,j,i-1,j-1,cellDetails,closedList,openList))
-      return;
+    if(i < SearchRegHeight && j < SearchRegWidth){ 
+      if(processSuccessor(i,j,i+1,j+1,cellDetails,closedList,openList,destin, src, dispX, dispY))
+	return;
+    }
+    if(i < SearchRegHeight){
+      if(processSuccessor(i,j,i+1,j,cellDetails,closedList,openList,destin, src, dispX, dispY)) 
+	return;
+    }
+    if(j < SearchRegWidth){
+      if(processSuccessor(i,j,i,j+1,cellDetails,closedList,openList,destin, src, dispX, dispY)) 
+	return;
+    }
+    if(i > 0){
+      if(processSuccessor(i,j,i-1,j,cellDetails,closedList,openList,destin, src, dispX, dispY))
+	return;
+    }
+    if(i > 0 && j < SearchRegWidth){
+      if(processSuccessor(i,j,i-1,j+1,cellDetails,closedList,openList,destin, src, dispX, dispY)) 
+	return;
+    }
+    if(j > 0){
+      if(processSuccessor(i,j,i,j-1,cellDetails,closedList,openList,destin, src, dispX, dispY)) 
+	return;
+    }
+    if(j > 0 && i < SearchRegHeight){
+      if(processSuccessor(i,j,i+1,j-1,cellDetails,closedList,openList,destin, src, dispX, dispY))
+	return;
+    }
+    if(i > 0 && j > 0){
+      if(processSuccessor(i,j,i-1,j-1,cellDetails,closedList,openList,destin, src, dispX, dispY))
+	return;
+    }
   }
-  destinX = destinX*chunkLength;
-  destinY = destinY*chunkLength;
+  if(!path.size())
+    std::cout << "Path not found!\n";
+  destin.x = destin.x*blockLength;
+  destin.y = destin.y*blockLength;
 }
 
-bool Character::processSuccessor(int i, int j, int newi, int newj, std::vector<std::vector<cell>> &cellDetails,  std::vector<std::vector<bool>> &closedList, std::set<pPair> &openList){
-  if(isValid(newi, newj) == true){ 
-      if(isDestination(newi, newj) == true && isUnBlocked(i,newj) == true && isUnBlocked(newi,j) == true){  
-	  cellDetails[newi][newj].parent_i = i; 
-	  cellDetails[newi][newj].parent_j = j;  
-	  setPath(cellDetails);
-	  destinX = destinX*chunkLength;
-	  destinY = destinY*chunkLength;
-	  return true; 
-	} 
-      else if(closedList[newi][newj] == false && isUnBlocked(newi, newj) == true && isUnBlocked(i,newj) == true && isUnBlocked(newi,j) == true){ 
-	  float gNew = cellDetails[i][j].g + 1.0; 
-	  float hNew = computeH(newi, newj); 
-	  float fNew = gNew + hNew; 
-	  if(cellDetails[newi][newj].f == FLT_MAX || cellDetails[newi][newj].f > fNew) { 
-	      openList.insert( std::make_pair (fNew, std::make_pair (newi, newj)));  
-	      cellDetails[newi][newj].f = fNew; 
-	      cellDetails[newi][newj].g = gNew; 
-	      cellDetails[newi][newj].h = hNew; 
-	      cellDetails[newi][newj].parent_i = i; 
-	      cellDetails[newi][newj].parent_j = j; 
-	    } 
-	} 
+bool Character::processSuccessor(int i, int j, int newi, int newj, std::vector<std::vector<cell>> &cellDetails,  std::vector<std::vector<bool>> &closedList, std::set<pPair> &openList, Vector2 destin, Vector2 src, int dispX, int dispY){
+
+  bool Blocked1 = isUnBlocked(i,newj, dispX, dispY, src); //Completely Unnecessary
+  bool Blocked2 = isUnBlocked(newi,j, dispX, dispY, src);
+  bool Blocked3 = isUnBlocked(newi,newj, dispX, dispY, src);
+  
+  if(Blocked3){
+    if(isDestination(newi, newj, destin) == true ){
+      if(newi != i && newj != j && (Blocked1 == false || Blocked2 == false)){ // Case of moving diagonally
+	return false;
+      }
+      std::cout << "Found the desintation: " << newj << " " << newi << std::endl << std::endl;
+      cellDetails[newi][newj].parent_i = i; 
+      cellDetails[newi][newj].parent_j = j;  
+      setPath(cellDetails, src, destin, dispX, dispY);
+      return true; 
+      } 
+    else if(closedList[newi][newj] == false && Blocked3 == true){
+      if(newi != i && newj != j && (Blocked1 == false || Blocked2 == false)){ //Case of moving diagonally
+	return false;
+      }
+      float gNew = cellDetails[i][j].g + 1.0; 
+      float hNew = computeH(newi, newj,destin); 
+      float fNew = gNew + hNew; 
+      if(cellDetails[newi][newj].f == FLT_MAX || cellDetails[newi][newj].f > fNew) { 
+	openList.insert(std::make_pair (fNew, std::make_pair (newi, newj)));  
+	cellDetails[newi][newj].f = fNew; 
+	cellDetails[newi][newj].g = gNew; 
+	cellDetails[newi][newj].h = hNew; 
+	cellDetails[newi][newj].parent_i = i; 
+	cellDetails[newi][newj].parent_j = j; 
+      } 
     }
+  }
   return false;
 }
-void Character::setPath(std::vector<std::vector<cell>> &cellDetails){
-  std::cout << this->name << ": ";
-  int row = destinY; 
-  int col = destinX; 
-  
-  std::stack<Pair> Path; 
-  
-  while (!(cellDetails[row][col].parent_i == row && cellDetails[row][col].parent_j == col )){ 
+void Character::setPath(std::vector<std::vector<cell>> &cellDetails, Vector2 src, Vector2 destin, int dispX, int dispY){
+  int row = destin.y; 
+  int col = destin.x;
+
+  std::stack<Pair> Path;
+  std::stack<Pair> tempPath;
+  std::cout << "Relative Path: ";
+  while (!(cellDetails[row][col].parent_i == row && cellDetails[row][col].parent_j == col )){ //Extract Path from cellDetails
+    std::cout << "(" << col << "," << row << ") ";
     Path.push (std::make_pair (row, col)); 
     int temp_row = cellDetails[row][col].parent_i; 
     int temp_col = cellDetails[row][col].parent_j; 
     row = temp_row; 
     col = temp_col; 
-  } 
+  }
+  std::cout << std::endl << std::endl;
+  
+  while(!Path.empty()){ // Convert the path coordinates
+     Pair temp_p = Path.top();
+     Path.pop();
+     RelativeToActual(temp_p.first,temp_p.second,dispX,dispY,src);
+     tempPath.push(temp_p);
+  }
+  
+  while(!tempPath.empty()){ // Re-flip path order
+    Path.push(tempPath.top());
+    tempPath.pop();
+   }
+
+  RelativeToActual(row,col,dispX,dispY,src); // Convert the destination coors
+  
+  //Set as Path to be travelled
   Path.push (std::make_pair (row, col));
-  startPos = Vector2{(float)chunkLength*Path.top().second,(float)chunkLength*Path.top().first};
+  startPos = Vector2{(float)blockLength*Path.top().second,(float)blockLength*Path.top().first};
   Path.pop(); //Don't need to travel to starting point
+  std::cout << "Actual Path: ";
   while (!Path.empty()){ 
     Pair p = Path.top();
-    Vector2 temp = Vector2{(float)chunkLength*p.second,(float)chunkLength*p.first};
+    Vector2 temp = Vector2{(float)blockLength*p.second,(float)blockLength*p.first};
     this->path.push_back(temp);
     std::cout << "(" << temp.x << " " << temp.y << ") ";
     Path.pop(); 
   }
-  map->find(Vector2{path.front().x,path.front().y})->second->setChunkType(ChunkType::unitSpace); //Claiming first chunk
+  std::cout << std::endl << std::endl;
+  //map->map->find(Vector2{startPos.x,startPos.y})->second->setBlockType(BlockType::freeSpace);
+  //map->map->find(Vector2{path.front().x,path.front().y})->second->setBlockType(BlockType::unitSpace); //Claiming first block
   std::cout << std::endl;
   return; 
 }
 
-bool Character::isUnBlocked(int row, int col){
-  return !map->find(Vector2{col*chunkLength,row*chunkLength})->second->isBlocked();
+void Character::RelativeToActual(int &row, int &col, int dispX, int dispY, Vector2 src){
+  if(src.x >= dispX)
+    col = col - (RelativeGridDim/(blockLength*2)) + dispX;
+  else
+    col = col - (RelativeGridDim/(blockLength*2)) + src.x;
+  if(src.y >= dispY)
+    row = row - (RelativeGridDim/(blockLength*2)) + dispY;
+  else
+    row = row - (RelativeGridDim/(blockLength*2)) + src.y;
 }
 
-int Character::Vec2Quad(Vector2 v){ //Returns quadrant BR = 1, BL = 2, TL = 3, TR = 4
+void Character::ActualToRelative(int &i, int &j, int &dispX,int &dispY, Vector2 &destin, Vector2 src){
+  if(src.y >= destin.y){
+    i = (RelativeGridDim/(blockLength*2)) + src.y-destin.y;
+    dispY = destin.y;
+    destin.y = destin.y - destin.y + (RelativeGridDim/(blockLength*2));
+  }
+  else{
+    i = (RelativeGridDim/(blockLength*2));
+    dispY = destin.y;
+    destin.y = (RelativeGridDim/(blockLength*2)) + destin.y - src.y;
+  }
+  if(src.x >= destin.x){
+    j = (RelativeGridDim/(blockLength*2)) + src.x - destin.x;
+    dispX = destin.x;
+    destin.x = (RelativeGridDim/(blockLength*2));
+  }
+  else{
+    j = (RelativeGridDim/(blockLength*2));
+    dispX = destin.x;
+    destin.x = (RelativeGridDim/(blockLength*2)) + destin.x - src.x;
+  }
+}
+
+bool Character::isUnBlocked(int row, int col, int dispX, int dispY, Vector2 src){ // Takes Relative Coordinates and Checks if block space is blocked
+  RelativeToActual(row,col,dispX,dispY,src);
+  if(map->map->find(Vector2{col*blockLength,row*blockLength}) != map->map->end())
+    return !map->map->find(Vector2{col*blockLength,row*blockLength})->second->isBlocked();
+  return false;
+}
+
+int Character::Vec2Quad(Vector2 v){
   if(v.x >= 0 && v.y >= 0)
     return 1;
   else if(v.x <= 0 && v.y >= 0)
@@ -299,41 +411,130 @@ int Character::Vec2Quad(Vector2 v){ //Returns quadrant BR = 1, BL = 2, TL = 3, T
     return 4;
 }
 
-void Character::analyzeMCP(){
-  auto it = map->cend();
-  it--;
-  if(mouseClickPoint.x < 0 || mouseClickPoint.y < 0 || mouseClickPoint.x > it->first.x + chunkLength || mouseClickPoint.y > it->first.y + chunkLength) //End of Map
-    return;
-  Chunk* chunk = map->find(Vector2{modChunkLength(mouseClickPoint.x),modChunkLength(mouseClickPoint.y)})->second;
-  if(chunk->getChunkType() == unitSpace){;
-    MCP_type = unitSpace;
-  }
-  else if(chunk->getChunkType() == freeSpace){
-    MCP_type = freeSpace;
-  }
-  else if(chunk->getChunkType() == structSpace){
-    MCP_type = structSpace;
-  }
+void Character::analyzeMCP(Vector2 MCP){
+  if(map->map->find(MCP) != map->map->end())
+    MCP_type = map->map->find(MCP)->second->getBlockType();
+  
 }
 
-bool Character::isDestination(int row, int col){
-  if(row == destinY && col == destinX)
+bool Character::isDestination(int row, int col, Vector2 destin){
+  if(row == destin.y && col == destin.x)
     return true;
   return false;
 }
 
-bool Character::isValid(int row, int col){return   (row >= 0) && (row < mapDim.y/chunkLength) && (col >= 0) && (col < mapDim.x/chunkLength);}
+bool Character::isValid(int row, int col){return 1;}
 
-float Character::computeH(int row, int col){
-  return (float)sqrt((row-destinY)*(row-destinY) + (col-destinX)*(col-destinX));
+float Character::computeH(int row, int col, Vector2 destin){
+  return (float)sqrt((row-destin.y)*(row-destin.y) + (col-destin.x)*(col-destin.x));
+}
+
+void Character::draw(){
+  static int frame = 1;
+  static float timer = 0.0f;
+  if(path.size()){ // Is Moving
+    timer += GetFrameTime();
+    if(timer > 0.25f){
+      timer = 0.0f;
+      frame = (frame % 4) + 1;
+    }
+    DrawTextureRec(AvatarSkin, {blockLength*frame,Direction*blockLength,blockLength,blockLength},{body.x,body.y},RAYWHITE);
+    switch(frame){
+    case 1:
+      if(!Direction)
+	Inven->DrawActiveItem({body.x+7,body.y},Direction);
+      else
+	Inven->DrawActiveItem({body.x-7,body.y},Direction);
+      break;
+    case 2:
+      if(!Direction)
+	Inven->DrawActiveItem({body.x+8,body.y},Direction);
+      else
+	Inven->DrawActiveItem({body.x-8,body.y},Direction);
+      break;
+    case 3:
+      if(!Direction)
+	Inven->DrawActiveItem({body.x+9,body.y-1},Direction);
+      else
+	Inven->DrawActiveItem({body.x-9,body.y-1},Direction);
+      break;
+    case 4:
+      if(!Direction)
+	Inven->DrawActiveItem({body.x+8,body.y},Direction);
+      else
+	Inven->DrawActiveItem({body.x-8,body.y},Direction);
+      break;
+    }
+  }
+  else{ // Is still
+    DrawTextureRec(AvatarSkin, {0,Direction*blockLength,blockLength,blockLength},{body.x,body.y},RAYWHITE);
+    if(!Direction)
+      Inven->DrawActiveItem({body.x+7,body.y+1},Direction);
+    else
+      Inven->DrawActiveItem({body.x-7,body.y+1},Direction);
+  }
+  
+  /*switch(selected){
+  case true:
+    DrawRectanglePro(Rectangle{body.x,body.y-(blockLength/5),body.width*(this->health/100),blockLength/10}, Vector2{0,0},0.0f,GREEN);
+    DrawTexture(AvatarSkin, body.x,body.y,RAYWHITE);
+    break;
+    }*/
+  
+}
+
+void Character::KeyPressAnalysis(){
+  switch(GetKeyPressed()){
+  case KEY_ONE:
+    Inven->SetActiveSlot(0);
+    break;
+  case KEY_TWO:
+    Inven->SetActiveSlot(1);
+    break;
+  case KEY_THREE:
+    Inven->SetActiveSlot(2);
+    break;
+  case KEY_FOUR:
+    Inven->SetActiveSlot(3);
+    break;
+  case KEY_FIVE:
+    Inven->SetActiveSlot(4);
+    break;
+  case KEY_SIX:
+    Inven->SetActiveSlot(5);
+    break;
+  case KEY_SEVEN:
+    Inven->SetActiveSlot(6);
+    break;
+  case KEY_EIGHT:
+    Inven->SetActiveSlot(7);
+    break;
+  case KEY_NINE:
+    Inven->SetActiveSlot(8);
+    break;
+  case KEY_ZERO:
+    Inven->SetActiveSlot(9);
+    break;
+  case KEY_SPACE:
+    UseActiveItem();
+    break;
+  }
+}
+
+void Character::UseActiveItem(){
+  //Run Animation of Using Item
+
+  //Run something like map->map->find(Block Player is facing)->second->HitBy(Item CurrItem)
+  if(map->map->count({body.x + blockLength, body.y}))
+    map->map->find({body.x + (-1*Direction+(Direction < 1))*blockLength, body.y})->second->HitBy(Inven->GetItem(Inven->GetActiveSlot()));
 }
 
 bool Character::isSelected(){return selected;}
 
 void Character::select(){if(this->selected == false){this->selected = true; displacement = numSelected; numSelected++;}}
 void Character::deselect(){if(this->selected == true){this->selected = false; displacement = 0; numSelected--;}}
-void Character::draw(){DrawRectanglePro(body, Vector2{0,0},0.0f,BLACK);}
 void Character::setSpeed(float newSpeed){this->speed = newSpeed;}
+void Character::setHealth(float newHealth){this->health = newHealth;}
 
 float Character::getHeight(){return body.height;}
 float Character::getWidth(){return body.width;}

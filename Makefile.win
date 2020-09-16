@@ -1,21 +1,22 @@
 
-APPNAME=test
 
-LDFLAGS:=-L c:/raylib/raylib/src -lm -lraylib  -pthread -lopengl32 -lgdi32 -lwinmm
+APPNAME:=$(shell basename `pwd`)
 
-CFLAGS:= -g -Wfatal-errors -pedantic -Wall -Wextra -Werror
-CFLAGS+= -std=c99 -I ./include -I ../raylib/src
+LDFLAGS:=-L ../raylib/src -lm -lraylib -lX11 -ldl -pthread
 
-SRC:=$(wildcard src/*.c)
-OBJ:=$(SRC:src/%.c=obj/%.o)
+CFLAGS:= -g -Wfatal-errors -pedantic -Wall -Wextra
+CFLAGS+= -I ./include -I ../raylib/src
+
+SRC:=$(wildcard src/*.cpp)
+OBJ:=$(SRC:src/%.cpp=obj/%.o)
 INC:=$(wildcard include/*.h)
 
-CC=gcc
+CC=x86_64-w64-mingw32-g++
 
 $(APPNAME): $(OBJ)
 	$(CC) $(OBJ) -o $(APPNAME) $(LDFLAGS)
 
-$(OBJ): obj/%.o : src/%.c
+$(OBJ): obj/%.o : src/%.cpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: debug release
@@ -26,8 +27,8 @@ debug release: clean $(APPNAME)
 
 .PHONY:	clean
 clean:
-	del obj\*
-	del $(APPNAME)
+	rm obj/* -f
+	rm $(APPNAME) -f
 
 style: $(SRC) $(INC)
 	astyle -A10 -s4 -S -p -xg -j -z2 -n src/* include/*
