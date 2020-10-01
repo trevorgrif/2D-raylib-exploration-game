@@ -12,14 +12,16 @@ class Item{
   float Weight;
 
   Texture2D ItemTexture;
+
+  static int _counter;
   
  public:
-  Item(){};
+  Item();
+  ~Item();
   Item(std::string ItemName,std::string TexturePath, float dure, float weight);
   std::string Name;
-  void Draw();
+  void Draw(Vector2 Pos, int Dir);
   Texture2D GetItemTexture();
-  
 };
 
 #endif //ITEM_H

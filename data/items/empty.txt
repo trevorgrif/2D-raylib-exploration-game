@@ -1,0 +1,4 @@
+Empty
+textures/items/empty.png
+0
+0

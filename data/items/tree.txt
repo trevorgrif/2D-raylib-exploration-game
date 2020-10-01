@@ -1,0 +1,4 @@
+Tree
+textures/items/tree.png
+10
+10

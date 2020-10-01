@@ -27,7 +27,7 @@ class Character{
   std::list<Vector2> path;
   Camera2D* camera;
  
-  std::map<std::string,Item>* itemTable;
+  std::map<std::string,Item*>* itemTable;
   
   Vector2 currV;
   Vector2 startPos;
@@ -47,7 +47,7 @@ class Character{
   int RelativeGridDim{4*16*(int)blockLength};
   int Direction{0}; // 0 == Right 1 == Left
 
-  float speed{8*blockLength}; //Note: unaffected by Monitor FPS since GetFrameTime() is called when moving
+  float speed{10*blockLength}; //Note: unaffected by Monitor FPS since GetFrameTime() is called when moving
   float displacement;
   float health{100};
   
@@ -60,11 +60,12 @@ class Character{
   Texture2D AvatarSkin;
   
  public:
-  Character(Rectangle Body, const char * name, Camera2D* camera, ProcMap* map, std::map<std::string,Item>* itemTable);
-  Character(Rectangle Body, const char * name, Camera2D* camera, ProcMap* map, std::map<std::string,Item>* itemTable, std::string NameArr[10]);
+  Character(Rectangle Body, const char * name, Camera2D* camera, ProcMap* map, std::map<std::string,Item*>* itemTable);
+  Character(Rectangle Body, const char * name, Camera2D* camera, ProcMap* map, std::map<std::string,Item*>* itemTable, std::string NameArr[10]);
   Character(){};
+  ~Character();
 
-  Inventory* Inven = new Inventory; //Need to delete this
+  Inventory* Inven;
 
   int Vec2Quad(Vector2 v);
 

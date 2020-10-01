@@ -3,26 +3,34 @@
 
 #include "raylib.h"
 #include "Item.h"
-#include "Block.h"
 #include <iostream>
+#include <vector>
 
 class Inventory{
  private:
   bool DisplayInv = true;
   int ActiveSlot{0};
-  Item Items[10];
+  std::vector<Item*> Items;
+  Item* EmptyItem;
+
+  static int _counter;
   
  public:
   Inventory();
+  ~Inventory();
+
 
   void Draw();
-  void AddItem(Item NewItem, int Pos);
-  void RemoveItem(Item OldItem);
-  void DrawActiveItem(Vector2 pos,int row);
+  void SetItemAtSlot(Item* NewItem, int Pos);
+  void CreateSlot();
+  void RemoveItem(Item* OldItem);
   void SetActiveSlot(int Pos);
   
-  Item GetItem(int Pos);
+  Item* GetItem(int Pos);
+  Item* GetActiveItem();
+  
   int GetActiveSlot();
+  int GetSize();
 };
 
 #endif //INVENTORY_H

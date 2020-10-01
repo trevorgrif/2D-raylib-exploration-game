@@ -1,28 +1,42 @@
 #include "Inventory.h"
 
+int Inventory::_counter{0};
 
 Inventory::Inventory(){
-
+  _counter++;
 }
 
 void Inventory::Draw(){
 
 }
 
-void Inventory::AddItem(Item NewItem, int Pos){
+void Inventory::SetItemAtSlot(Item* NewItem, int Pos){
   Items[Pos] = NewItem;
 }
 
-void Inventory::RemoveItem(Item OldItem){
+void Inventory::CreateSlot(){
+  Items.push_back(new Item);
+}
+
+void Inventory::RemoveItem(Item* OldItem){
 
 }
 
-void Inventory::DrawActiveItem(Vector2 pos, int col){
-  DrawTextureRec(Items[GetActiveSlot()].GetItemTexture(), {col*blockLength,0,blockLength,blockLength},{pos.x, pos.y}, RAYWHITE);
-}
+Item* Inventory::GetItem(int Pos){return Items[Pos];}
 
-Item Inventory::GetItem(int Pos){return Items[Pos];}
+Item* Inventory::GetActiveItem(){return Items[ActiveSlot];}
 
 int Inventory::GetActiveSlot(){return ActiveSlot;}
 
 void Inventory::SetActiveSlot(int Pos){ActiveSlot = Pos;}
+
+int Inventory::GetSize(){
+  return Items.size();
+}
+
+Inventory::~Inventory(){
+  _counter--;
+  //for(auto p : Items)
+  // delete p;
+  //Items.clear();
+}

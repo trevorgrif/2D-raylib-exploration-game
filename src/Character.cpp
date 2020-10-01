@@ -6,7 +6,8 @@ int Character::numSelected{0};
 BlockType Character::MCP_type{Undefined};
 Vector2 Character::mouseClickPoint;
 
-Character::Character(Rectangle Body,  const char* name, Camera2D* camera, ProcMap* map, std::map<std::string,Item>* itemTable){
+Character::Character(Rectangle Body,  const char* name, Camera2D* camera, ProcMap* map, std::map<std::string,Item*>* itemTable){
+  Inven = new Inventory;
   this->body = Body;
   this->name = name;
   this->camera = camera;
@@ -17,9 +18,14 @@ Character::Character(Rectangle Body,  const char* name, Camera2D* camera, ProcMa
   this->AvatarSkin = LoadTexture("textures/player/avatar.png"); //Careful of this if ever loading multiple characters
   this->itemTable = itemTable;
   
+ 
+  for(int i = 0; i <= 9; i++)
+    this->Inven->CreateSlot();
+  
 }
 
-Character::Character(Rectangle Body,  const char* name, Camera2D* camera, ProcMap* map, std::map<std::string,Item>* itemTable, std::string NameArr[10]){
+Character::Character(Rectangle Body,  const char* name, Camera2D* camera, ProcMap* map, std::map<std::string,Item*>* itemTable, std::string NameArr[10]){
+  Inven = new Inventory;
   this->body = Body;
   this->name = name;
   this->camera = camera;
@@ -30,9 +36,13 @@ Character::Character(Rectangle Body,  const char* name, Camera2D* camera, ProcMa
   this->AvatarSkin = LoadTexture("textures/player/avatar.png"); //Careful of this if ever loading multiple characters
   this->itemTable = itemTable;
   for(int i = 0; i <= 9; i++){
-    if(NameArr[i] != "")
-      Inven->AddItem(itemTable->find(NameArr[i])->second,i);
+    Inven->CreateSlot();
+    Inven->SetItemAtSlot(itemTable->find(NameArr[i])->second,i);
   }
+}
+
+Character::~Character(){
+  delete Inven;
 }
 
 void Character::updateUnit(Camera2D* camera){ // Interprets mouse action and updates unit accordingly
@@ -212,8 +222,8 @@ void Character::findPath(Vector2 destin){ //A* Search path finding
       cellDetails[i][j].parent_j = -1;
     }
   }
-  std::cout << "\nStarting Point: " << src.x << " " << src.y << std::endl;
-  std::cout << "Destination Point: " << destin.x << " " << destin.y << std::endl;
+  //std::cout << "\nStarting Point: " << src.x << " " << src.y << std::endl;
+  //std::cout << "Destination Point: " << destin.x << " " << destin.y << std::endl;
   // Initializing Source Node AND converting to new relative grid
   ActualToRelative(i,j,dispX,dispY,destin,src);
   
@@ -284,7 +294,7 @@ bool Character::processSuccessor(int i, int j, int newi, int newj, std::vector<s
       if(newi != i && newj != j && (Blocked1 == false || Blocked2 == false)){ // Case of moving diagonally
 	return false;
       }
-      std::cout << "Found the desintation: " << newj << " " << newi << std::endl << std::endl;
+      //std::cout << "Found the desintation: " << newj << " " << newi << std::endl << std::endl;
       cellDetails[newi][newj].parent_i = i; 
       cellDetails[newi][newj].parent_j = j;  
       setPath(cellDetails, src, destin, dispX, dispY);
@@ -315,16 +325,16 @@ void Character::setPath(std::vector<std::vector<cell>> &cellDetails, Vector2 src
 
   std::stack<Pair> Path;
   std::stack<Pair> tempPath;
-  std::cout << "Relative Path: ";
+  //std::cout << "Relative Path: ";
   while (!(cellDetails[row][col].parent_i == row && cellDetails[row][col].parent_j == col )){ //Extract Path from cellDetails
-    std::cout << "(" << col << "," << row << ") ";
+    //std::cout << "(" << col << "," << row << ") ";
     Path.push (std::make_pair (row, col)); 
     int temp_row = cellDetails[row][col].parent_i; 
     int temp_col = cellDetails[row][col].parent_j; 
     row = temp_row; 
     col = temp_col; 
   }
-  std::cout << std::endl << std::endl;
+  //std::cout << std::endl << std::endl;
   
   while(!Path.empty()){ // Convert the path coordinates
      Pair temp_p = Path.top();
@@ -344,18 +354,18 @@ void Character::setPath(std::vector<std::vector<cell>> &cellDetails, Vector2 src
   Path.push (std::make_pair (row, col));
   startPos = Vector2{(float)blockLength*Path.top().second,(float)blockLength*Path.top().first};
   Path.pop(); //Don't need to travel to starting point
-  std::cout << "Actual Path: ";
+  //std::cout << "Actual Path: ";
   while (!Path.empty()){ 
     Pair p = Path.top();
     Vector2 temp = Vector2{(float)blockLength*p.second,(float)blockLength*p.first};
     this->path.push_back(temp);
-    std::cout << "(" << temp.x << " " << temp.y << ") ";
+    //std::cout << "(" << temp.x << " " << temp.y << ") ";
     Path.pop(); 
   }
-  std::cout << std::endl << std::endl;
+  //std::cout << std::endl << std::endl;
   //map->map->find(Vector2{startPos.x,startPos.y})->second->setBlockType(BlockType::freeSpace);
   //map->map->find(Vector2{path.front().x,path.front().y})->second->setBlockType(BlockType::unitSpace); //Claiming first block
-  std::cout << std::endl;
+  //std::cout << std::endl;
   return; 
 }
 
@@ -432,46 +442,47 @@ float Character::computeH(int row, int col, Vector2 destin){
 void Character::draw(){
   static int frame = 1;
   static float timer = 0.0f;
+  Item* ActiveItem = Inven->GetActiveItem();
   if(path.size()){ // Is Moving
     timer += GetFrameTime();
     if(timer > 0.25f){
       timer = 0.0f;
       frame = (frame % 4) + 1;
     }
-    DrawTextureRec(AvatarSkin, {blockLength*frame,Direction*blockLength,blockLength,blockLength},{body.x,body.y},RAYWHITE);
+    DrawTextureRec(AvatarSkin, {blockLength*frame,Direction*blockLength,blockLength,blockLength},{body.x,body.y},RAYWHITE); 
     switch(frame){
     case 1:
       if(!Direction)
-	Inven->DrawActiveItem({body.x+7,body.y},Direction);
+	ActiveItem->Draw({body.x+8, body.y}, Direction);
       else
-	Inven->DrawActiveItem({body.x-7,body.y},Direction);
+	ActiveItem->Draw({body.x-7, body.y}, Direction);
       break;
     case 2:
       if(!Direction)
-	Inven->DrawActiveItem({body.x+8,body.y},Direction);
+	ActiveItem->Draw({body.x+8, body.y}, Direction);
       else
-	Inven->DrawActiveItem({body.x-8,body.y},Direction);
+	ActiveItem->Draw({body.x-8, body.y}, Direction);
       break;
     case 3:
       if(!Direction)
-	Inven->DrawActiveItem({body.x+9,body.y-1},Direction);
+	ActiveItem->Draw({body.x+9, body.y-1}, Direction);
       else
-	Inven->DrawActiveItem({body.x-9,body.y-1},Direction);
+	ActiveItem->Draw({body.x-9, body.y-1}, Direction);
       break;
     case 4:
       if(!Direction)
-	Inven->DrawActiveItem({body.x+8,body.y},Direction);
+	ActiveItem->Draw({body.x+8, body.y}, Direction);
       else
-	Inven->DrawActiveItem({body.x-8,body.y},Direction);
+	ActiveItem->Draw({body.x-8, body.y}, Direction);
       break;
     }
   }
   else{ // Is still
     DrawTextureRec(AvatarSkin, {0,Direction*blockLength,blockLength,blockLength},{body.x,body.y},RAYWHITE);
     if(!Direction)
-      Inven->DrawActiveItem({body.x+7,body.y+1},Direction);
+      ActiveItem->Draw({body.x+7, body.y+1}, Direction);
     else
-      Inven->DrawActiveItem({body.x-7,body.y+1},Direction);
+      ActiveItem->Draw({body.x-7, body.y+1}, Direction);
   }
   
   /*switch(selected){

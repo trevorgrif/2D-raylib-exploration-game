@@ -1,7 +1,9 @@
 #include "Block.h"
+#include <random>
 #include <iostream>
 
 std::map<int,Texture2D>* Block::BlockTextures = new std::map<int,Texture2D>;
+std::map<std::string, Item*>* Block::itemTable = new std::map<std::string,Item*>;
 int Block::_counter = 0;
 
 float blockLength = 16;
@@ -16,20 +18,40 @@ float modBlockLength(float x){
       return (float)((int)x - ((int)x % (int)blockLength) - blockLength);
   }
 }
-
-Block::Block(Rectangle body,float NoiseValue){
+//ITemTable is being loaded hundreds of times...
+//Creating New Block Constructor
+Block::Block(Rectangle body,float NoiseValue,std::map<std::string,Item*>* itemTable){
+  std::random_device rd;
+  std::mt19937 mt(rd());
+  std::uniform_real_distribution<float> dist(-4, 4);
+  std::uniform_real_distribution<float> dist2(-6, 2);
+  ShiftX = dist(mt);
+  ShiftY = dist2(mt);
+  
   this->body = body;
   this->NoiseValue = NoiseValue;
+  this->itemTable = itemTable;
+  this->BlockInventory->CreateSlot();
   EvaluateNoise();
   LoadTextures();
   _counter++;
 }
 
-Block::Block(Rectangle body,BlockType btype){
+// Loading Block Data COnstructor
+Block::Block(Rectangle body,float NoiseValue, float ShiftX, float ShiftY, std::map<std::string,Item*>* itemTable){
   this->body = body;
-  setBlockType(btype);
+  this->NoiseValue = NoiseValue;
+  this->itemTable = itemTable;
+  this->ShiftX = ShiftX;
+  this->ShiftY = ShiftY;
+  this->BlockInventory->CreateSlot();
+  EvaluateNoise();
   LoadTextures();
   _counter++;
+}
+
+Block::~Block(){
+  delete BlockInventory;
 }
 
 void Block::LoadTextures(){
@@ -46,6 +68,7 @@ void Block::LoadTextures(){
 void Block::EvaluateNoise(){
   if(NoiseValue >= 0.2){
     setBlockType(DarkForest);
+    BlockInventory->SetItemAtSlot(itemTable->find("Tree")->second,0);
     return;
   }
   else if(NoiseValue >= 0.01){
@@ -118,7 +141,7 @@ void Block::setBlockType(BlockType newType){
 void Block::drawBlock(){
   switch(block_type){
   case DarkForest:
-    DrawTexture(BlockTextures->find(4)->second,this->body.x,this->body.y,RAYWHITE);
+    DrawTexture(BlockTextures->find(3)->second,this->body.x,this->body.y,RAYWHITE);
     break;
   case Grass:
     DrawTexture(BlockTextures->find(3)->second,this->body.x,this->body.y,RAYWHITE);
@@ -148,8 +171,16 @@ void Block::drawBlock(){
   }
 }
 
-void Block::HitBy(Item ActiveItem){
-  if(ActiveItem.Name == "Wood Sword"){
+void Block::drawItem(){
+  switch(block_type){
+  case DarkForest:
+    BlockInventory->GetActiveItem()->Draw({body.x+ ShiftX,body.y+ShiftY}, 1);
+    break;
+  }
+}
+
+void Block::HitBy(Item* ActiveItem){
+  if(ActiveItem->Name == "Wood Sword"){
     switch(block_type){
     case DarkForest:
       setBlockType(Grass);
@@ -160,4 +191,5 @@ void Block::HitBy(Item ActiveItem){
 
 BlockType Block::getBlockType(){return block_type;}
 
-
+float Block::GetShiftX(){return ShiftX;}
+float Block::GetShiftY(){return ShiftY;}

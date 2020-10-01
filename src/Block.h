@@ -3,6 +3,8 @@
 #include <iostream>
 #include "Inventory.h"
 #include "raylib.h"
+#include <time.h>
+#include <stdlib.h>
 #include <map>
 
 enum BlockType{
@@ -14,7 +16,8 @@ enum BlockType{
 	       DeepWater,
 	       WetSand,
 	       SandyGrass,
-	       Undefined};
+	       Undefined
+};
 
 extern float blockLength;
 extern float modBlockLength(float x);
@@ -36,7 +39,7 @@ public:
 
 
 class Block{
- private:
+private:
   Rectangle body = Rectangle{0,0,0,0};
   bool blocked{false};
   Color color{GREEN};
@@ -45,13 +48,20 @@ class Block{
   Vector2 GradValue;
   int chunkLength = 20;
 
+  float ShiftX, ShiftY;
+
+  Inventory* BlockInventory = new Inventory();
+
   static std::map<int,Texture2D>* BlockTextures;
+  static std::map<std::string, Item*>* itemTable;
   static int _counter;
-  
- public:
+		  
+public:
   Block(Rectangle body){this->body = body; this->block_type = Undefined;};
-  Block(Rectangle body,float NoiseValue);
-  Block(Rectangle body,BlockType btype);
+  Block(Rectangle body,float NoiseValue,std::map<std::string,Item*>* itemTable);
+  Block(Rectangle body,float NoiseValue, float ShiftX, float ShiftY, std::map<std::string,Item*>* itemTable);
+  ~Block();
+  
   Rectangle getRect(){return this->body;};
   bool isBlocked(){return blocked;};
   void setX(float x){this->body.x = x;};
@@ -61,10 +71,13 @@ class Block{
   BlockType getBlockType();
   void setBlockType(BlockType newType);
   void drawBlock();
+  void drawItem();
   void EvaluateNoise();
   void LoadTextures();
-  void HitBy(Item ActiveItem);
+  void HitBy(Item* ActiveItem);
   float GetNoiseValue(){return NoiseValue;};
+  float GetShiftX();
+  float GetShiftY();
   
 };
 
