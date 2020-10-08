@@ -1,4 +1,4 @@
-APPNAME=test
+APPNAME=run
 
 LDFLAGS:=-static -L ~/raylib/src -lm -lraylib  -pthread -lopengl32 -lgdi32 -lwinmm -lstdc++
 
@@ -25,8 +25,8 @@ debug release: clean $(APPNAME)
 
 .PHONY:	clean
 clean:
-	del obj\*
-	del $(APPNAME)
+	rm obj\* -f
+	rm $(APPNAME) -f
 
 style: $(SRC) $(INC)
 	astyle -A10 -s4 -S -p -xg -j -z2 -n src/* include/*
