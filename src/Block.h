@@ -6,6 +6,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <map>
+#include <vector>
 
 enum BlockType{
 	       DarkForest,
@@ -52,13 +53,14 @@ private:
 
   Inventory* BlockInventory = new Inventory();
 
-  static std::map<int,Texture2D>* BlockTextures;
+  static std::vector<Texture2D> BlockTextures;
   static std::map<std::string, Item*>* itemTable;
   static int _counter;
 		  
 public:
   Block(Rectangle body){this->body = body; this->block_type = Undefined;};
   Block(Rectangle body,float NoiseValue,std::map<std::string,Item*>* itemTable);
+  Block(Rectangle body,float NoiseValue);
   Block(Rectangle body,float NoiseValue, float ShiftX, float ShiftY, std::map<std::string,Item*>* itemTable);
   ~Block();
   

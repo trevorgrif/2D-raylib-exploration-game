@@ -183,7 +183,7 @@ const FN_DECIMAL CELL_3D_Z[] =
 
 static int FastFloor(FN_DECIMAL f) { return (f >= 0 ? (int)f : (int)f - 1); }
 static int FastRound(FN_DECIMAL f) { return (f >= 0) ? (int)(f + FN_DECIMAL(0.5)) : (int)(f - FN_DECIMAL(0.5)); }
-static int FastAbs(int i) { return abs(i); }
+//static int FastAbs(int i) { return abs(i); }
 static FN_DECIMAL FastAbs(FN_DECIMAL f) { return fabs(f); }
 static FN_DECIMAL Lerp(FN_DECIMAL a, FN_DECIMAL b, FN_DECIMAL t) { return a + t * (b - a); }
 static FN_DECIMAL InterpHermiteFunc(FN_DECIMAL t) { return t*t*(3 - 2 * t); }
@@ -401,6 +401,8 @@ FN_DECIMAL FastNoise::GetNoise(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z) const
 			return SingleCubicFractalBillow(x, y, z);
 		case RigidMulti:
 			return SingleCubicFractalRigidMulti(x, y, z);
+		default:
+		  return 0;
 		}
 	default:
 		return 0;
@@ -425,6 +427,8 @@ FN_DECIMAL FastNoise::GetNoise(FN_DECIMAL x, FN_DECIMAL y) const
 			return SingleValueFractalBillow(x, y);
 		case RigidMulti:
 			return SingleValueFractalRigidMulti(x, y);
+		default:
+		  return 0;
 		}
 	case Perlin:
 		return SinglePerlin(0, x, y);
@@ -437,6 +441,8 @@ FN_DECIMAL FastNoise::GetNoise(FN_DECIMAL x, FN_DECIMAL y) const
 			return SinglePerlinFractalBillow(x, y);
 		case RigidMulti:
 			return SinglePerlinFractalRigidMulti(x, y);
+		default:
+		  return 0;
 		}
 	case Simplex:
 		return SingleSimplex(0, x, y);
@@ -449,6 +455,8 @@ FN_DECIMAL FastNoise::GetNoise(FN_DECIMAL x, FN_DECIMAL y) const
 			return SingleSimplexFractalBillow(x, y);
 		case RigidMulti:
 			return SingleSimplexFractalRigidMulti(x, y);
+		default:
+		  return 0;
 		}
 	case Cellular:
 		switch (m_cellularReturnType)
@@ -473,6 +481,8 @@ FN_DECIMAL FastNoise::GetNoise(FN_DECIMAL x, FN_DECIMAL y) const
 			return SingleCubicFractalBillow(x, y);
 		case RigidMulti: 
 			return SingleCubicFractalRigidMulti(x, y);
+		default:
+		  return 0;
 		}
 	}
 	return 0;

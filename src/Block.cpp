@@ -2,7 +2,7 @@
 #include <random>
 #include <iostream>
 
-std::map<int,Texture2D>* Block::BlockTextures = new std::map<int,Texture2D>;
+std::vector<Texture2D> Block::BlockTextures;
 std::map<std::string, Item*>* Block::itemTable = new std::map<std::string,Item*>;
 int Block::_counter = 0;
 
@@ -27,7 +27,7 @@ Block::Block(Rectangle body,float NoiseValue,std::map<std::string,Item*>* itemTa
   std::uniform_real_distribution<float> dist2(-6, 2);
   ShiftX = dist(mt);
   ShiftY = dist2(mt);
-  
+
   this->body = body;
   this->NoiseValue = NoiseValue;
   this->itemTable = itemTable;
@@ -37,7 +37,23 @@ Block::Block(Rectangle body,float NoiseValue,std::map<std::string,Item*>* itemTa
   _counter++;
 }
 
-// Loading Block Data COnstructor
+Block::Block(Rectangle body,float NoiseValue){
+  std::random_device rd;
+  std::mt19937 mt(rd());
+  std::uniform_real_distribution<float> dist(-4, 4);
+  std::uniform_real_distribution<float> dist2(-6, 2);
+  ShiftX = dist(mt);
+  ShiftY = dist2(mt);
+  
+  this->body = body;
+  this->NoiseValue = NoiseValue;
+  this->BlockInventory->CreateSlot();
+  EvaluateNoise();
+  LoadTextures();
+  _counter++;
+}
+
+// Loading Block Data Constructor
 Block::Block(Rectangle body,float NoiseValue, float ShiftX, float ShiftY, std::map<std::string,Item*>* itemTable){
   this->body = body;
   this->NoiseValue = NoiseValue;
@@ -56,12 +72,12 @@ Block::~Block(){
 
 void Block::LoadTextures(){
   if(_counter == 1){
-    BlockTextures->insert({1,LoadTexture("textures/blocks/water.png")});
-    BlockTextures->insert({2,LoadTexture("textures/blocks/sand.png")});
-    BlockTextures->insert({3,LoadTexture("textures/blocks/grass.png")});
-    BlockTextures->insert({4,LoadTexture("textures/blocks/forest.png")});
-    BlockTextures->insert({5,LoadTexture("textures/blocks/wetsand.png")});
-    BlockTextures->insert({6,LoadTexture("textures/blocks/sandygrass.png")});
+    BlockTextures.push_back(LoadTexture("textures/blocks/water.png"));
+    BlockTextures.push_back(LoadTexture("textures/blocks/sand.png"));
+    BlockTextures.push_back(LoadTexture("textures/blocks/grass.png"));
+    BlockTextures.push_back(LoadTexture("textures/blocks/forest.png"));
+    BlockTextures.push_back(LoadTexture("textures/blocks/wetsand.png"));
+    BlockTextures.push_back(LoadTexture("textures/blocks/sandygrass.png"));
   }
 }
 
@@ -103,6 +119,7 @@ void Block::EvaluateNoise(){
     setBlockType(Undefined);
     return;
   }
+  
 }
 
 void Block::setBlockType(BlockType newType){
@@ -141,40 +158,58 @@ void Block::setBlockType(BlockType newType){
 void Block::drawBlock(){
   switch(block_type){
   case DarkForest:
-    DrawTexture(BlockTextures->find(3)->second,this->body.x,this->body.y,RAYWHITE);
+    DrawTexture(BlockTextures[2],this->body.x,this->body.y,RAYWHITE);
+    BlockInventory->GetActiveItem()->Draw({body.x+ ShiftX,body.y+ShiftY}, 1);
     break;
   case Grass:
-    DrawTexture(BlockTextures->find(3)->second,this->body.x,this->body.y,RAYWHITE);
+    DrawTexture(BlockTextures[2],this->body.x,this->body.y,RAYWHITE);
     break;
   case SandyGrass:
-    DrawTexture(BlockTextures->find(6)->second,this->body.x,this->body.y,RAYWHITE);
+    DrawTexture(BlockTextures[5],this->body.x,this->body.y,RAYWHITE);
     break;
   case Sand:
-    DrawTexture(BlockTextures->find(2)->second,this->body.x,this->body.y,RAYWHITE);
+    DrawTexture(BlockTextures[1],this->body.x,this->body.y,RAYWHITE);
     break;
   case WetSand:
-    DrawTexture(BlockTextures->find(5)->second,this->body.x,this->body.y,RAYWHITE);
+    DrawTexture(BlockTextures[4],this->body.x,this->body.y,RAYWHITE);
     break;
   case ShallowWater:
-    DrawTexture(BlockTextures->find(1)->second,this->body.x,this->body.y,RAYWHITE);
+    DrawTexture(BlockTextures[0],this->body.x,this->body.y,RAYWHITE);
     break;
   case Water:
-    DrawTexture(BlockTextures->find(1)->second,this->body.x,this->body.y,SKYBLUE);
+    DrawTexture(BlockTextures[0],this->body.x,this->body.y,SKYBLUE);
     break;
   case DeepWater:
-    DrawTexture(BlockTextures->find(1)->second,this->body.x,this->body.y,BLUE);
+    DrawTexture(BlockTextures[0],this->body.x,this->body.y,BLUE);
     break;
   case Undefined:
     DrawRectanglePro(this->body, Vector2{0,0}, 0.0f, YELLOW);
     std::cout << NoiseValue << std::endl;
     break;
   }
+  
 }
 
 void Block::drawItem(){
   switch(block_type){
   case DarkForest:
     BlockInventory->GetActiveItem()->Draw({body.x+ ShiftX,body.y+ShiftY}, 1);
+    break;
+  case Grass:
+    break;
+  case SandyGrass:
+    break;
+  case Sand:
+    break;
+  case WetSand:
+    break;
+  case ShallowWater:
+    break;
+  case Water:
+    break;
+  case DeepWater:
+    break;
+  case Undefined:
     break;
   }
 }
@@ -185,6 +220,22 @@ void Block::HitBy(Item* ActiveItem){
     case DarkForest:
       setBlockType(Grass);
       NoiseValue = 0.011;
+    case Grass:
+      break;
+    case SandyGrass:
+      break;
+    case Sand:
+      break;
+    case WetSand:
+      break;
+    case ShallowWater:
+      break;
+    case Water:
+      break;
+    case DeepWater:
+      break;
+    case Undefined:
+      break;
     }
   }
 }

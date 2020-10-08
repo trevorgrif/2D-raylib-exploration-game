@@ -3,7 +3,7 @@
 #include <iostream> //Mostly for debugging
 #include "Button.h"
 #include "Character.h"
-#include "ProcMap.h"
+#include "TileMap.h"
 #include "FastNoise.h"
 #include <map>
 #include <fstream>
@@ -17,20 +17,20 @@ float screenWidth;
 float screenHeight;
 
 // Primary Functions
-void MainMenu(std::map<int,Character*>* unitTable, Camera2D* camera, ProcMap* map, std::map<std::string,Button>* ButtonTable, std::map<std::string,Item*>* itemTable);
-void GameLogic(std::map<int,Character*>* unitTable, Camera2D* camera);
-void GameDraw(std::map<int,Character*>* unitTable, Camera2D* camera, ProcMap* map);
+void MainMenu(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map, std::map<std::string,Button>* ButtonTable, std::map<std::string,Item*>* itemTable);
+void GameLogic(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map);
+void GameDraw(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map);
 void MakeButtons(std::map<std::string,Button>* ButtonTable);
-void PauseDraw(std::map<int,Character*>* unitTable,std::map<std::string,Button>* ButtonTable, std::string SaveName, ProcMap* map);
-void SaveData(std::map<int,Character*>* unitTable,std::string SaveName, ProcMap* map);
-void LoadMap(std::map<int,Character*>* unitTable,Camera2D* camera, std::string SaveName, ProcMap* map, std::map<std::string,Item*>* itemTable);
+void PauseDraw(std::vector<Character*>* unitTable,std::map<std::string,Button>* ButtonTable, std::string SaveName, TileMap* map);
+//void SaveData(std::vector<Character*>* unitTable,std::string SaveName, TileMap* map);
+//void LoadMap(std::vector<Character*>* unitTable,Camera2D* camera, std::string SaveName, TileMap* map, std::map<std::string,Item*>* itemTable);
 void LoadItemData(std::map<std::string,Item*>* itemTable);
-void ClearGameData(std::map<int,Character*>* unitTable, ProcMap* map);
+//void ClearGameData(std::vector<Character*>* unitTable, TileMap* map);
 void EndScreen();
 
 // Helper Functions
-void CameraUpdate(Camera2D* Camera, std::map<int,Character*>* unitTable);
-void initMap(std::map<int,Character*>* unitTable, Camera2D* camera, ProcMap* map, std::map<std::string,Item*>* itemTable);
+void CameraUpdate(Camera2D* Camera, std::vector<Character*>* unitTable);
+void initMap(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map, std::map<std::string,Item*>* itemTable);
 
 int main(void){
   std::string testSave = "TestSave.txt"; 
@@ -48,10 +48,10 @@ int main(void){
   camera->rotation = 0.0f;
   camera->zoom = 2.0f;
  
-  std::map<int, Character*>* unitTable = new std::map<int,Character*>; //Need to delete
+  std::vector<Character*>* unitTable = new std::vector<Character*>; //Need to delete
   std::map<std::string, Item*>* itemTable = new std::map<std::string, Item*>; //Need to delete
   LoadItemData(itemTable);
-  ProcMap* map = new ProcMap(itemTable);
+  TileMap* map = new TileMap(itemTable);
   
   std::map<std::string,Button>* ButtonTable = new std::map<std::string,Button>; // Need to delete
   MakeButtons(ButtonTable);
@@ -68,7 +68,7 @@ int main(void){
 	BeginDrawing();
 	switch(GamePause){
 	case false:
-	  GameLogic(unitTable, camera);
+	  GameLogic(unitTable, camera, map);
 	  GameDraw(unitTable, camera, map);
 	  break;
 	case true:
@@ -86,7 +86,7 @@ int main(void){
   return 0;
 }
 
-void MainMenu(std::map<int,Character*>* unitTable, Camera2D* camera, ProcMap* map, std::map<std::string,Button>* ButtonTable, std::map<std::string,Item*>* itemTable){
+void MainMenu(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map, std::map<std::string,Button>* ButtonTable, std::map<std::string,Item*>* itemTable){
   
   // Logic
   if(ButtonTable->find("M1")->second.isMouseClick()){
@@ -96,7 +96,7 @@ void MainMenu(std::map<int,Character*>* unitTable, Camera2D* camera, ProcMap* ma
   else if(ButtonTable->find("M2")->second.isMouseClick()){
     loadMainMenu = false;
     std::string testSave = "TestSave.txt";
-    LoadMap(unitTable, camera, testSave, map, itemTable);
+    //LoadMap(unitTable, camera, testSave, map, itemTable);
   }
 
   // Display Menu items
@@ -105,17 +105,29 @@ void MainMenu(std::map<int,Character*>* unitTable, Camera2D* camera, ProcMap* ma
   ButtonTable->find("M2")->second.Draw();
 }
 
-void GameLogic(std::map<int,Character*>* unitTable, Camera2D* camera){
-  CameraUpdate(camera,unitTable); 
-  for(auto it = unitTable->cbegin(); it != unitTable->cend(); ++it){
-    it->second->updateUnit(camera);
+void GameLogic(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map){
+  static int count = 0;
+  CameraUpdate(camera,unitTable);
+  for(int i = 0; i < 1; i++){
+    (*unitTable)[i]->updateUnit(camera);
+    if(count == 0){
+      Vector2 P1 = GetScreenToWorld2D({0,0},*camera);
+      Vector2 P2 = GetScreenToWorld2D({0,screenHeight}, *camera);
+      Vector2 P3 = GetScreenToWorld2D({screenWidth,0}, *camera);
+      Vector2 P4 = GetScreenToWorld2D({screenWidth,screenHeight}, *camera);
+      if( (map->GetBlock(P1) == nullptr) || (map->GetBlock(P2) == nullptr) || (map->GetBlock(P3) == nullptr) || (map->GetBlock(P4) == nullptr) ){ //Any of the four corners aren't loading blocks
+	map->UpdateChunkList(Vector2{(*unitTable)[i]->getX(),(*unitTable)[i]->getY()});
+      }
+    }
   }
+  count++;
+  count = count % 500;
   if(IsKeyPressed(KEY_P)){
     GamePause = true;
   }
 }
 
-void GameDraw(std::map<int,Character*>* unitTable, Camera2D* camera, ProcMap* map){ 
+void GameDraw(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map){ 
   ClearBackground(RAYWHITE);
   BeginMode2D(*camera);
 
@@ -126,12 +138,12 @@ void GameDraw(std::map<int,Character*>* unitTable, Camera2D* camera, ProcMap* ma
   int cxmax = v.x;
   int cymax = v.y;
 
-  //Draw all Units
-  for(auto it = unitTable->cbegin(); it != unitTable->cend();++it){
-    if(it->second->getX()+it->second->getWidth() >= cxmin && it->second->getX() <= cxmax && it->second->getY()+it->second->getHeight() >= cymin && it->second->getY() <= cymax){
-      map->DrawCloseChunks(Vector2{it->second->getX(),it->second->getY()}, 3);
-      it->second->draw();
-      map->DrawCloseChunksItems(Vector2{it->second->getX(),it->second->getY()}, 3);
+  //Draw all Units 
+  for(int i = 0; i < (int)unitTable->size();i++){
+    if((*unitTable)[i]->getX()+(*unitTable)[i]->getWidth() >= cxmin && (*unitTable)[i]->getX() <= cxmax && (*unitTable)[i]->getY()+(*unitTable)[i]->getHeight() >= cymin && (*unitTable)[i]->getY() <= cymax){
+
+      map->DrawChunkList();
+      (*unitTable)[i]->draw();
     }
   }
   Vector2 tempo{screenWidth-75,0};
@@ -140,17 +152,21 @@ void GameDraw(std::map<int,Character*>* unitTable, Camera2D* camera, ProcMap* ma
   EndMode2D();
 }
 
-void PauseDraw(std::map<int,Character*>* unitTable,std::map<std::string,Button>* ButtonTable,std::string SaveName, ProcMap* map){
+void PauseDraw(std::vector<Character*>* unitTable,std::map<std::string,Button>* ButtonTable,std::string SaveName, TileMap* map){
+  SaveName = "";
+  map->ClearMap(); //These three lines do nothing, just remove errors until saving/loading is fixed
+  (*unitTable)[0]->getX();
+
   if(ButtonTable->find("P1")->second.isMouseClick()){
     GamePause = false;
   }
   else if(ButtonTable->find("P3")->second.isMouseClick()){
-    ClearGameData(unitTable,map);
+    //ClearGameData(unitTable,map);
     loadMainMenu = true;
     GamePause = false;
   }
   else if(ButtonTable->find("P2")->second.isMouseClick()){
-    SaveData(unitTable,SaveName,map);
+    //SaveData(unitTable,SaveName,map);
   }
   ButtonTable->find("P1")->second.Draw();
   ButtonTable->find("P2")->second.Draw();
@@ -162,7 +178,7 @@ void EndScreen(){
   //Report Final Score and redirect to Main Menu
 }
 
-void CameraUpdate(Camera2D* camera, std::map<int,Character*>* unitTable){
+void CameraUpdate(Camera2D* camera, std::vector<Character*>* unitTable){
   static int mx0;
   static int my0;
   //Zoom settings
@@ -185,15 +201,14 @@ void CameraUpdate(Camera2D* camera, std::map<int,Character*>* unitTable){
     camera->target.y = camera->target.y+diffY;
     return;
   }
-  auto it = unitTable->cbegin();
-  camera->target.x = it->second->getX();
-  camera->target.y = it->second->getY();
+  camera->target.x = (*unitTable)[0]->getX();
+  camera->target.y = (*unitTable)[0]->getY();
 }
 
-void initMap(std::map<int,Character*>* unitTable, Camera2D* camera, ProcMap* map, std::map<std::string,Item*>* itemTable){
+void initMap(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map, std::map<std::string,Item*>* itemTable){
   //Create UnitTable
-  unitTable->insert({1,new Character(Rectangle{(float)0,(float)0,16,16},"Player",camera,map, itemTable)});
-  unitTable->find(1)->second->Inven->SetItemAtSlot(itemTable->find("Wood Sword")->second,0);
+  unitTable->push_back(new Character(Rectangle{(float)0,(float)0,16,16},"Player", camera, map, itemTable));
+  (*unitTable)[0]->Inven->SetItemAtSlot(itemTable->find("Wood Sword")->second,0);
 }
 
 void MakeButtons(std::map<std::string,Button>* ButtonTable){
@@ -204,8 +219,8 @@ void MakeButtons(std::map<std::string,Button>* ButtonTable){
   ButtonTable->insert({"P3",{"Quit",(float)(screenWidth/2.0-100) ,(float)(screenHeight*6/8-50.0),250,125,Vector2{0,0},0.0f}});
 }
 
-void SaveData(std::map<int,Character*>* unitTable,std::string SaveName, ProcMap* map){ //Needs to save/Load inventory
-  std::string directory = "data/worlds/";
+//void SaveData(std::vector<Character*>* unitTable,std::string SaveName, TileMap* map){ //Needs to save/Load inventory
+  /*std::string directory = "data/worlds/";
   directory.append(SaveName);
   
   std::ofstream outFile;
@@ -219,14 +234,14 @@ void SaveData(std::map<int,Character*>* unitTable,std::string SaveName, ProcMap*
     std::cout << "Saving Item " << i << "\n";
     outFile << unitTable->find(1)->second->Inven->GetItem(i)->Name << std::endl;
   }
-  for(auto it = map->map->cbegin(); it != map->map->cend(); ++it){
+  COMMENT THIS OUT for(auto it = map->map->cbegin(); it != map->map->cend(); ++it){
     outFile <<  it->first.x << " " << it->first.y << " " << it->second->GetNoiseValue() << " " << it->second->GetShiftX() << " " << it->second->GetShiftY() << " ";
-  }
-  outFile.close();
-}
+    }
+    outFile.close();*/
+//}
 
-void LoadMap(std::map<int,Character*>* unitTable,Camera2D* camera, std::string SaveName, ProcMap* map, std::map<std::string,Item*>* itemTable){
-  // Load Data from file
+//void LoadMap(std::vector<Character*>* unitTable,Camera2D* camera, std::string SaveName, TileMap* map, std::map<std::string,Item*>* itemTable){
+  /*// Load Data from file
   float tempSeed;
   Vector2 pos;
   float NoiseValue, ShiftX, ShiftY;
@@ -256,8 +271,8 @@ void LoadMap(std::map<int,Character*>* unitTable,Camera2D* camera, std::string S
   inFile.close();
 
   //Create UnitTable
-  unitTable->insert({1,new Character({PlayerPos.x,PlayerPos.y,blockLength,blockLength},"Player",camera,map,itemTable,ItemArr)});
-}
+  unitTable->insert({1,new Character({PlayerPos.x,PlayerPos.y,blockLength,blockLength},"Player",camera,map,itemTable,ItemArr)});*/
+//}
 
 void LoadItemData(std::map<std::string,Item*>* itemTable){
   std::cout << "Loading item data...\n";
@@ -281,18 +296,18 @@ void LoadItemData(std::map<std::string,Item*>* itemTable){
     
     //Add items to table
     itemTable->insert({ItemName,CurrItem});
-  }
+    }
 }
 
-void ClearGameData(std::map<int,Character*>* unitTable, ProcMap* map){ // Frees memory but maintains allocation for larger objects
+//void ClearGameData(std::vector<Character*>* unitTable, TileMap* map){ // Frees memory but maintains allocation for larger objects
   //Clear Old/Unwanted Data
-  map->ClearMap();
-  map->GetRanSeed();
-  for(auto it = unitTable->cbegin(); it != unitTable->cend();){
-    delete it->second;
-    it = unitTable->erase(it);
-  }
+  // map->ClearMap();
+  //map->GetRanSeed();
+  //for(auto it = unitTable->cbegin(); it != unitTable->cend();){
+  // delete it->second;
+  // it = unitTable->erase(it);
+  //}
   
-}
+//}
 
 

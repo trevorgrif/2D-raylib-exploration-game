@@ -2,7 +2,7 @@
 #define CHARACTER_H
 
 #include "raylib.h"
-#include "ProcMap.h"
+#include "TileMap.h"
 #include <map>
 #include <list>
 #include <set>
@@ -23,7 +23,7 @@ struct cell{
 
 class Character{
  private:
-  ProcMap* map;
+  TileMap* map;
   std::list<Vector2> path;
   Camera2D* camera;
  
@@ -60,8 +60,8 @@ class Character{
   Texture2D AvatarSkin;
   
  public:
-  Character(Rectangle Body, const char * name, Camera2D* camera, ProcMap* map, std::map<std::string,Item*>* itemTable);
-  Character(Rectangle Body, const char * name, Camera2D* camera, ProcMap* map, std::map<std::string,Item*>* itemTable, std::string NameArr[10]);
+  Character(Rectangle Body, const char * name, Camera2D* camera, TileMap* map, std::map<std::string,Item*>* itemTable);
+  Character(Rectangle Body, const char * name, Camera2D* camera, TileMap* map, std::map<std::string,Item*>* itemTable, std::string NameArr[10]);
   Character(){};
   ~Character();
 
@@ -71,7 +71,6 @@ class Character{
 
   bool isUnBlocked(int row, int col, int dispX, int dispY, Vector2 src);  
   bool isDestination(int row, int col, Vector2 destin);
-  bool isValid(int row, int col);
   bool isSelected();
   bool processSuccessor(int i, int j,int newi,int newj, std::vector<std::vector<cell>> &cellDetails,  std::vector<std::vector<bool>> &closedList, std::set<pPair> &openList, Vector2 destin, Vector2 src,int dispX,int dispY);
 
@@ -89,7 +88,7 @@ class Character{
   void KeyPressAnalysis();
   void UseActiveItem();
   void setSpeed(float newSpeed);
-  void findNearestFreeBlock(Vector2 &destin);
+  void findNearestFreeBlock();
   void moveAlongPath(Vector2 &destin);
   void analyzeMCP(Vector2 MCP);
   void deselect();

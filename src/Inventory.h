@@ -23,7 +23,7 @@ class Inventory{
   void Draw();
   void SetItemAtSlot(Item* NewItem, int Pos);
   void CreateSlot();
-  void RemoveItem(Item* OldItem);
+  void RemoveItem(int Pos);
   void SetActiveSlot(int Pos);
   
   Item* GetItem(int Pos);

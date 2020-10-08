@@ -3,6 +3,9 @@
 int Inventory::_counter{0};
 
 Inventory::Inventory(){
+  Items.resize(9);
+  for(int i = 0; i < 9; i++)
+    Items[i] = new Item();
   _counter++;
 }
 
@@ -15,11 +18,11 @@ void Inventory::SetItemAtSlot(Item* NewItem, int Pos){
 }
 
 void Inventory::CreateSlot(){
-  Items.push_back(new Item);
+
 }
 
-void Inventory::RemoveItem(Item* OldItem){
-
+void Inventory::RemoveItem(int Pos){
+  delete Items[Pos];
 }
 
 Item* Inventory::GetItem(int Pos){return Items[Pos];}
@@ -36,7 +39,9 @@ int Inventory::GetSize(){
 
 Inventory::~Inventory(){
   _counter--;
-  //for(auto p : Items)
-  // delete p;
-  //Items.clear();
+  //for(int i = 0; i < Items.size(); i++){
+  //  delete Items[i];
+  //}
+  std::cout << "\t\t Inventory Count --> " << _counter <<std::endl;
+  //  Items.clear();
 }

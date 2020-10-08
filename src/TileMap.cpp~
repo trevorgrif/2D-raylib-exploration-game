@@ -1,0 +1,444 @@
+#include "TileMap.h"
+#include <iostream>
+#include <stdlib.h>
+#include <random>
+#include <math.h>
+
+TileMap::TileMap(std::map<std::string,Item*>* itemTable){
+  MapNoise.SetNoiseType(FastNoise::Perlin);
+  GetRanSeed();
+  this->itemTable = itemTable;
+
+  LoadedBlockList.resize(MAX_X);
+  for(int i = 0; i < MAX_X; i++)
+    LoadedBlockList[i].resize(MAX_Y);
+  
+  for(int i = 0; i < MAX_X; i++){
+    for(int j = 0; j < MAX_Y; j++){
+      int x = RevIndex(i);
+      int y = RevIndex(j);
+      LoadedBlockList[i][j] = new Block(Rectangle{x*blockLength,y*blockLength,blockLength,blockLength},GetNoise(x*blockLength,y*blockLength),itemTable);
+    }
+  }
+
+  ChunkListCoor.resize(9);
+  ChunkList.resize(9);
+
+  Vector2 Center{0,0};
+  ChunkListCoor[0] = {Center.x - ChunkLength*blockLength,Center.y - ChunkLength*blockLength};
+  ChunkListCoor[1] = {Center.x , Center.y - ChunkLength*blockLength};
+  ChunkListCoor[2] = {Center.x + ChunkLength*blockLength,Center.y - ChunkLength*blockLength};
+  ChunkListCoor[3] = {Center.x - ChunkLength*blockLength,Center.y};
+  ChunkListCoor[4] = {Center.x , Center.y};
+  ChunkListCoor[5] = {Center.x + ChunkLength*blockLength,Center.y};
+  ChunkListCoor[6] = {Center.x - ChunkLength*blockLength,Center.y + ChunkLength*blockLength};
+  ChunkListCoor[7] = {Center.x , Center.y + ChunkLength*blockLength};
+  ChunkListCoor[8] = {Center.x + ChunkLength*blockLength,Center.y + ChunkLength*blockLength};
+
+  LoadChunkList();
+}
+
+void TileMap::ClearMap(){
+  /*for(auto it = map->begin(); it != map->cend();){
+    delete it->second;
+    it = map->erase(it);
+    }*/
+}
+
+float TileMap::GetNoise(int x,int y){
+  return MapNoise.GetNoise(x,y);
+}
+
+void TileMap::GetRanSeed(){
+  std::random_device rd;
+  std::mt19937 mt(rd());
+  std::uniform_real_distribution<float> dist(-1000000, 1000000);
+  MapNoise.SetSeed(dist(mt));
+}
+
+float TileMap::getSeed(){return MapNoise.GetSeed();}
+void TileMap::setSeed(float seed){MapNoise.SetSeed(seed);}
+
+void TileMap::DrawChunk(Vector2 v){ //Takes any coor of a block in the chunk and draws the whole chunk
+  float temp;
+  float x1,y1;
+  v.x = v.x+(0.5*blockLength);
+  v.y = v.y+(0.5*blockLength);
+  //Determine the coors of the upper left and bottom right corners
+  float x0 = v.x - ((int)v.x % (int)(ChunkLength*blockLength));
+  float y0 = v.y - ((int)v.y % (int)(ChunkLength*blockLength));
+  if(v.x >= 0 && v.y >= 0){ //Quad IV
+    
+    x1 = x0 + (ChunkLength*blockLength);
+    y1 = y0 + (ChunkLength*blockLength);
+    // Adding info to map
+    for(int i =x0; i <= x1; i = i+blockLength){
+      for(int j = y0; j <= y1; j = j+blockLength){
+	if(GetBlock(Vector2{(float)i,(float)j}) == nullptr)
+	  AddToList(Vector2{(float)i,(float)j});
+      }
+    }
+    for(int i = x0; i <= x1; i = i+blockLength){
+      for(int j = y0; j <= y1; j = j+blockLength){
+	Vector2 IdxPos{i/blockLength,j/blockLength};
+	Index(IdxPos);
+	LoadedBlockList[IdxPos.x][IdxPos.y]->drawBlock();
+	std::cout << "Drawing Chunk 2\n";
+      }
+    }
+    
+  }
+  else if(v.x >= 0 && v.y <= 0){ //Quad I
+    x1 = x0 + (ChunkLength*blockLength);
+    y1 = y0 - (ChunkLength*blockLength);
+    temp = y0;
+    y0 = y1;
+    y1 = temp;
+    // Adding info to map
+    for(int i =x0; i <= x1; i = i+blockLength){
+      for(int j = y0; j < y1; j = j+blockLength){
+	if(GetBlock(Vector2{(float)i,(float)j}) == nullptr)
+	  AddToList(Vector2{(float)i,(float)j});
+      }
+    }
+    for(int i = x0; i <= x1; i = i+blockLength){
+      for(int j = y0; j < y1; j = j+blockLength){
+	Vector2 IdxPos{i/blockLength,j/blockLength};
+	Index(IdxPos);
+	LoadedBlockList[IdxPos.x][IdxPos.y]->drawBlock();
+      }
+    }
+  }
+  else if(v.x <= 0 && v.y >= 0){ //Quad III
+    x1 = x0 - (ChunkLength*blockLength);
+    y1 = y0 + (ChunkLength*blockLength);
+    temp = x0;
+    x0 = x1;
+    x1 = temp;
+    // Adding info to map
+    for(int i =x0; i < x1; i = i+blockLength){
+      for(int j = y0; j <= y1; j = j+blockLength){
+	if(GetBlock(Vector2{(float)i,(float)j}) == nullptr)
+	  AddToList(Vector2{(float)i,(float)j});
+      }
+    }
+    for(int i = x0; i < x1; i = i+blockLength){
+      for(int j = y0; j <= y1; j = j+blockLength){
+	Vector2 IdxPos{i/blockLength,j/blockLength};
+	Index(IdxPos);
+	LoadedBlockList[IdxPos.x][IdxPos.y]->drawBlock();
+      }
+    }
+  }
+  else{ //Quad II
+    x1 = x0 - (ChunkLength*blockLength);
+    y1 = y0 - (ChunkLength*blockLength);
+    temp = y0;
+    y0 = y1;
+    y1 = temp;
+    temp = x0;
+    x0 = x1;
+    x1 = temp;
+    // Adding info to map
+    for(int i =x0; i < x1; i = i+blockLength){
+      for(int j = y0; j < y1; j = j+blockLength){
+	if(GetBlock(Vector2{(float)i,(float)j}) == nullptr)
+	  AddToList(Vector2{(float)i,(float)j});
+      }
+    }
+    for(int i = x0; i < x1; i = i+blockLength){
+      for(int j = y0; j < y1; j = j+blockLength){
+	Vector2 IdxPos{i/blockLength,j/blockLength};
+	Index(IdxPos);
+	LoadedBlockList[IdxPos.x][IdxPos.y]->drawBlock();
+      }
+    }
+  }
+  std::cout << "Exiting Chunk Drawing\n";
+}
+
+/*void TileMap::DrawChunkItems(Vector2 v){ //Takes any coor of a block in the chunk and draws the whole chunk
+  float temp;
+  float x1,y1;
+  v.x = v.x+(0.5*blockLength);
+  v.y = v.y+(0.5*blockLength);
+  //Determine the coors of the upper left and bottom right corners
+  float x0 = v.x - ((int)v.x % (int)(ChunkLength*blockLength));
+  float y0 = v.y - ((int)v.y % (int)(ChunkLength*blockLength));
+  if(v.x >= 0 && v.y >= 0){ //Quad IV
+    x1 = x0 + (ChunkLength*blockLength);
+    y1 = y0 + (ChunkLength*blockLength);
+    // Adding info to map
+    for(int i = x0; i <= x1; i = i+blockLength){
+      for(int j = y0; j <= y1; j = j+blockLength){
+	find(Vector2{(float)i,(float)j})->second->drawItem();
+      }
+    }
+  }
+  else if(v.x >= 0 && v.y <= 0){ //Quad I
+    x1 = x0 + (ChunkLength*blockLength);
+    y1 = y0 - (ChunkLength*blockLength);
+    temp = y0;
+    y0 = y1;
+    y1 = temp;
+
+    for(int i = x0; i <= x1; i = i+blockLength){
+      for(int j = y0; j < y1; j = j+blockLength){
+	map->find(Vector2{(float)i,(float)j})->second->drawItem();
+      }
+    }
+  }
+  else if(v.x <= 0 && v.y >= 0){ //Quad III
+    x1 = x0 - (ChunkLength*blockLength);
+    y1 = y0 + (ChunkLength*blockLength);
+    temp = x0;
+    x0 = x1;
+    x1 = temp;
+    for(int i = x0; i < x1; i = i+blockLength){
+      for(int j = y0; j <= y1; j = j+blockLength){
+	map->find(Vector2{(float)i,(float)j})->second->drawItem();
+      }
+    }
+  }
+  else{ //Quad II
+    x1 = x0 - (ChunkLength*blockLength);
+    y1 = y0 - (ChunkLength*blockLength);
+    temp = y0;
+    y0 = y1;
+    y1 = temp;
+    temp = x0;
+    x0 = x1;
+    x1 = temp;
+    
+    for(int i = x0; i < x1; i = i+blockLength){
+      for(int j = y0; j < y1; j = j+blockLength){
+	map->find(Vector2{(float)i,(float)j})->second->drawItem();
+      }
+    }
+  }
+  }*/
+
+void TileMap::DrawCloseChunks(Vector2 v, int radius){ //Draws a region around the character should be adjustable
+  float regLen = ChunkLength*blockLength;
+
+  for(int r = 0; r <= radius; r++){
+    for(int x = -1*r; x <= r; x++){ //Draws positive y
+      int y = r - abs(x);
+      DrawChunk(Vector2{ v.x+(x*regLen) , v.y+(y*regLen) });
+    }
+    for(int x = -1*r; x <= r; x++){ //Draws positive y
+      int y = abs(x) - r;
+      DrawChunk(Vector2{ v.x+(x*regLen) , v.y+(y*regLen) });
+    }
+  }
+}
+
+/*void TileMap::DrawCloseChunksItems(Vector2 v, int radius){ //Draws a region around the character should be adjustable
+  float regLen = ChunkLength*blockLength;
+
+  for(int r = 0; r <= radius; r++){
+    for(int x = -1*r; x <= r; x++){ //Draws positive y
+      int y = r - abs(x);
+      DrawChunkItems(Vector2{ v.x+(x*regLen) , v.y+(y*regLen) });
+    }
+    for(int x = -1*r; x <= r; x++){ //Draws positive y
+      int y = abs(x) - r;
+      DrawChunkItems(Vector2{ v.x+(x*regLen) , v.y+(y*regLen) });
+    }
+  }
+  }*/
+
+
+
+// NEW METHODS
+
+void TileMap::DrawCloseBlocks(Vector2 Center, Vector2 Radius){
+  Radius.x = Radius.x*blockLength;
+  Radius.y = Radius.y*blockLength;
+  for(int i = Center.x-Radius.x; i <= Center.x+Radius.x; i=i+blockLength){
+    for(int j = Center.y-Radius.y; j <= Center.y+Radius.y; j=j+blockLength){
+      LoadBlock((Vector2){i,j});
+    }
+  }
+}
+
+void TileMap::LoadBlock(Vector2 Loc){ //Expecting Loc to be actual game space coords
+  Loc.x = Loc.x/blockLength;
+  Loc.y = Loc.y/blockLength;
+  Index(Loc);
+  Block* tempBlock = LoadedBlockList[Loc.x][Loc.y];
+  tempBlock->drawBlock();
+  tempBlock->drawItem();
+}
+
+Block* TileMap::GetBlock(Vector2 v){ //Expecting v to be actual game space coords
+  Vector2 v2 = GetChunkCoor(v);
+  std::cout << v2.x << " " << v2.y << std::endl;
+  for(int i = 0; i < 9; i++){
+    if(ChunkListCoor[i].x == v2.x && ChunkListCoor[i].y == v2.y){
+      std::cout << "Chunk found\n";
+      return ChunkList[i]->GetBlock(v);
+    }
+  }
+}
+
+int TileMap::RevIndex(int x){
+  if(x%2 == 0)
+    x = x/2.0;
+  else
+    x = (x+1)/(-2.0);
+  return x;
+}
+
+void TileMap::Index(Vector2 &v){
+  if(v.x >= 0)
+    v.x = v.x*2;
+  else
+    v.x = -2*v.x-1;
+  if(v.y >= 0)
+    v.y = v.y*2;
+  else
+    v.y = -2*v.y-1;
+  //return ((0.5)*(v.x+v.y-1)*(v.x+v.y-2))+v.x; Old Code for 1D array
+}
+
+void TileMap::DrawVisibleChunks(Vector2 PlayerPos, Vector2 Radius){
+  //Determine Visible Chunks from Player Pos
+  Vector2 IdxPos;
+  if(PlayerPos.x >= 0)
+    IdxPos.x = PlayerPos.x + (Radius.x*blockLength);
+  else
+    IdxPos.x = PlayerPos.x - (Radius.x*blockLength);
+  if(PlayerPos.y >= 0)
+    IdxPos.y = PlayerPos.y + (Radius.y*blockLength);
+  else
+    IdxPos.y = PlayerPos.y - (Radius.y*blockLength);
+  Index(IdxPos);
+  
+  //Make sure all such chunks have been loaded into LoadedBlockList
+  if(IdxPos.x >= MAX_X){
+    LoadedBlockList.resize(IdxPos.x);
+    for(int i = MAX_X; i < IdxPos.x; i++){
+      LoadedBlockList[i].resize(MAX_Y);
+      for(int j = 0; j < MAX_Y; j++){
+	int x = RevIndex(i);
+	int y = RevIndex(j);
+	LoadedBlockList[i][j] = new Block(Rectangle{x*blockLength,y*blockLength,blockLength,blockLength},GetNoise(x*blockLength,y*blockLength),itemTable);
+      }
+    }
+    MAX_X = IdxPos.x;
+  }
+  if(IdxPos.y >= MAX_Y){
+    for(int i = 0; i < MAX_X; i++){
+      LoadedBlockList[i].resize(IdxPos.y);
+      for(int j = MAX_Y; j < IdxPos.y; j++){
+	int x = RevIndex(i);
+	int y = RevIndex(j);
+	LoadedBlockList[i][j] = new Block(Rectangle{x*blockLength,y*blockLength,blockLength,blockLength},GetNoise(x*blockLength,y*blockLength),itemTable);
+      }
+    }
+    MAX_Y = IdxPos.y;
+  }
+ 
+  //Set the variables for the chunk region
+  MinVis.x = PlayerPos.x - (Radius.x*blockLength);
+  MinVis.y = PlayerPos.y - (Radius.y*blockLength);
+
+  MaxVis.x = PlayerPos.x + (Radius.x*blockLength);
+  MaxVis.y = PlayerPos.y + (Radius.y*blockLength);
+  
+  //Draw those chunks
+  for(int i = MinVis.x; i < MaxVis.x; i=i+blockLength){
+    for(int j = MinVis.y; j < MaxVis.y; j=j+blockLength){
+      LoadBlock({i,j});
+    }
+  }
+}
+
+void TileMap::AddToList(Vector2 v){
+  if(GetBlock(v) == nullptr){
+    v.x = v.x/blockLength;
+    v.y = v.y/blockLength;
+    Index(v);
+    if(v.x >= LoadedBlockList.size()){
+      LoadedBlockList.resize(v.x+1);
+      for(int i = 0; i < LoadedBlockList.size(); i++){
+	LoadedBlockList[i].resize(LoadedBlockList[0].size());
+      }
+      MAX_X = v.x;
+    }
+    if(v.y > LoadedBlockList[0].size()){
+      for(int i = 0; i < LoadedBlockList.size(); i++){
+	LoadedBlockList[i].resize(v.y+1);
+      }
+      MAX_Y = v.y;
+    }
+    for(int i = 0; i < LoadedBlockList.size(); i++){
+      for(int j = 0; j < LoadedBlockList[0].size(); j++){
+	int x = RevIndex(i);
+	int y = RevIndex(j);
+	if(GetBlock({x*blockLength,y*blockLength}) == nullptr){
+	  LoadedBlockList[i][j] = new Block(Rectangle{x*blockLength,y*blockLength,blockLength,blockLength},GetNoise(x*blockLength,y*blockLength),itemTable);
+	}
+      }
+    }
+  }
+}
+
+void TileMap::UpdateChunkList(Vector2 Center){ //Non-dynamic size rn
+  //Get the Coords of the Chunk
+  Center = GetChunkCoor(Center);
+
+  //Delete all old chunks (a bit wasteful rn, should only update new chunks)
+  UnloadChunkList();
+
+  //Reset List
+  ChunkListCoor[0] = {Center.x - ChunkLength*blockLength,Center.y - ChunkLength*blockLength};
+  ChunkListCoor[1] = {Center.x , Center.y - ChunkLength*blockLength};
+  ChunkListCoor[2] = {Center.x + ChunkLength*blockLength,Center.y - ChunkLength*blockLength};
+  ChunkListCoor[3] = {Center.x - ChunkLength*blockLength,Center.y};
+  ChunkListCoor[4] = {Center.x , Center.y};
+  ChunkListCoor[5] = {Center.x + ChunkLength*blockLength,Center.y};
+  ChunkListCoor[6] = {Center.x - ChunkLength*blockLength,Center.y + ChunkLength*blockLength};
+  ChunkListCoor[7] = {Center.x , Center.y + ChunkLength*blockLength};
+  ChunkListCoor[8] = {Center.x + ChunkLength*blockLength,Center.y + ChunkLength*blockLength};
+
+  //Load New Chunks (i.e. allocated memory)
+  LoadChunkList();
+}
+
+void TileMap::DrawChunkList(){
+  for(auto it = ChunkList.begin(); it != ChunkList.end(); ++it){
+    (*it)->DrawChunk();
+  }
+}
+
+Vector2 TileMap::GetChunkCoor(Vector2 Pos){
+ 
+  Pos.x = Pos.x+(0.5*blockLength);
+  Pos.y = Pos.y+(0.5*blockLength);
+  
+  //Determine the coors of the upper left
+  float x0 = Pos.x - ((int)Pos.x % (int)(ChunkLength*blockLength));
+  float y0 = Pos.y - ((int)Pos.y % (int)(ChunkLength*blockLength));
+   std::cout << "Hi " << x0 << " " << y0 << std::endl;
+  return {x0,y0};
+}
+
+void TileMap::LoadChunkList(){
+  for(int i = 0; i < 9; i++){
+    float NoiseArr[256];
+    for(int j = 0; j < 256; j++){
+      int col = j % 16;
+      int row = (j-(j%16))/16;
+      NoiseArr[j] = GetNoise(ChunkListCoor[i].x + col*blockLength,ChunkListCoor[i].y + row*blockLength);
+    }
+    ChunkList[i] = new Chunk({ChunkListCoor[i].x,ChunkListCoor[i].y}, NoiseArr);
+  }
+}
+
+void TileMap::UnloadChunkList(){
+  for(int i = 0; i < 9; i++){
+    delete ChunkList[i];
+  }
+}

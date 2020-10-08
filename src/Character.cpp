@@ -6,7 +6,7 @@ int Character::numSelected{0};
 BlockType Character::MCP_type{Undefined};
 Vector2 Character::mouseClickPoint;
 
-Character::Character(Rectangle Body,  const char* name, Camera2D* camera, ProcMap* map, std::map<std::string,Item*>* itemTable){
+Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMap* map, std::map<std::string,Item*>* itemTable){
   Inven = new Inventory;
   this->body = Body;
   this->name = name;
@@ -24,7 +24,7 @@ Character::Character(Rectangle Body,  const char* name, Camera2D* camera, ProcMa
   
 }
 
-Character::Character(Rectangle Body,  const char* name, Camera2D* camera, ProcMap* map, std::map<std::string,Item*>* itemTable, std::string NameArr[10]){
+Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMap* map, std::map<std::string,Item*>* itemTable, std::string NameArr[10]){
   Inven = new Inventory;
   this->body = Body;
   this->name = name;
@@ -108,7 +108,7 @@ void Character::updateUnit(Camera2D* camera){ // Interprets mouse action and upd
       destin.x = modBlockLength(MCP.x); // Setting the destination vector
       destin.y = modBlockLength(MCP.y);
 
-      findNearestFreeBlock(destin); // Path finding
+      findNearestFreeBlock(); // Path finding (Just clears path rn
       findPath(destin);
 	
       MCP_type = Undefined;
@@ -125,19 +125,7 @@ void Character::updateUnit(Camera2D* camera){ // Interprets mouse action and upd
   KeyPressAnalysis();
 }
 
-void Character::findNearestFreeBlock(Vector2 &destin){ // Finds nearest open space and sets destin.x and destin.y to that location
-  /*while(path.size() && map->map->find(Vector2{path.back().x,path.back().y})->second->isBlocked() == true){ 
-    if(path.size() == 1){
-      destin.x = body.x;
-      destin.y = body.y;
-      path.pop_back();
-    }
-    else{
-      path.pop_back();
-      destin.x = path.back().x;
-      destin.y = path.back().y;
-    }
-    }*/
+void Character::findNearestFreeBlock(){ // Finds nearest open space and sets destin.x and destin.y to that location
   path.clear();
 }
 
@@ -163,9 +151,9 @@ void Character::moveAlongPath(Vector2 &destin){ // Increments player.pos towards
     startPos = Vector2{path.front().x,path.front().y};
     path.pop_front();
     if(path.size()){ // Just arrived and still moving check if next block space is blocked. If blocked reroute, if not claim next space
-      if(map->map->find(Vector2{path.front().x,path.front().y})->second->isBlocked() == true){// If path is obstructed along the journey then find new path
+      if(map->GetBlock(Vector2{path.front().x,path.front().y})->isBlocked() == true){// If path is obstructed along the journey then find new path
 	std::cout << this->name << " path is obstructed at " << path.front().x << " " << path.front().y << std::endl;
-	findNearestFreeBlock(destin);
+	findNearestFreeBlock();
 	findPath(destin);
       }
       /*if(map->map->find(Vector2{path.front().x,path.front().y})->second->isBlocked() == false && path.size()){
@@ -284,8 +272,7 @@ void Character::findPath(Vector2 destin){ //A* Search path finding
 }
 
 bool Character::processSuccessor(int i, int j, int newi, int newj, std::vector<std::vector<cell>> &cellDetails,  std::vector<std::vector<bool>> &closedList, std::set<pPair> &openList, Vector2 destin, Vector2 src, int dispX, int dispY){
-
-  bool Blocked1 = isUnBlocked(i,newj, dispX, dispY, src); //Completely Unnecessary
+  bool Blocked1 = isUnBlocked(i,newj, dispX, dispY, src);
   bool Blocked2 = isUnBlocked(newi,j, dispX, dispY, src);
   bool Blocked3 = isUnBlocked(newi,newj, dispX, dispY, src);
   
@@ -405,8 +392,9 @@ void Character::ActualToRelative(int &i, int &j, int &dispX,int &dispY, Vector2 
 
 bool Character::isUnBlocked(int row, int col, int dispX, int dispY, Vector2 src){ // Takes Relative Coordinates and Checks if block space is blocked
   RelativeToActual(row,col,dispX,dispY,src);
-  if(map->map->find(Vector2{col*blockLength,row*blockLength}) != map->map->end())
-    return !map->map->find(Vector2{col*blockLength,row*blockLength})->second->isBlocked();
+  if(map->GetBlock(Vector2{col*blockLength,row*blockLength}) != nullptr){
+    return !map->GetBlock(Vector2{col*blockLength,row*blockLength})->isBlocked();
+  }
   return false;
 }
 
@@ -422,9 +410,8 @@ int Character::Vec2Quad(Vector2 v){
 }
 
 void Character::analyzeMCP(Vector2 MCP){
-  if(map->map->find(MCP) != map->map->end())
-    MCP_type = map->map->find(MCP)->second->getBlockType();
-  
+  if(map->GetBlock(MCP) != nullptr)
+    MCP_type = map->GetBlock(MCP)->getBlockType();
 }
 
 bool Character::isDestination(int row, int col, Vector2 destin){
@@ -432,8 +419,6 @@ bool Character::isDestination(int row, int col, Vector2 destin){
     return true;
   return false;
 }
-
-bool Character::isValid(int row, int col){return 1;}
 
 float Character::computeH(int row, int col, Vector2 destin){
   return (float)sqrt((row-destin.y)*(row-destin.y) + (col-destin.x)*(col-destin.x));
@@ -449,7 +434,7 @@ void Character::draw(){
       timer = 0.0f;
       frame = (frame % 4) + 1;
     }
-    DrawTextureRec(AvatarSkin, {blockLength*frame,Direction*blockLength,blockLength,blockLength},{body.x,body.y},RAYWHITE); 
+    DrawTextureRec(AvatarSkin, {blockLength*frame,Direction*blockLength,blockLength,blockLength},{body.x,body.y},RAYWHITE);
     switch(frame){
     case 1:
       if(!Direction)
@@ -475,14 +460,14 @@ void Character::draw(){
       else
 	ActiveItem->Draw({body.x-8, body.y}, Direction);
       break;
-    }
+      }
   }
   else{ // Is still
     DrawTextureRec(AvatarSkin, {0,Direction*blockLength,blockLength,blockLength},{body.x,body.y},RAYWHITE);
     if(!Direction)
       ActiveItem->Draw({body.x+7, body.y+1}, Direction);
     else
-      ActiveItem->Draw({body.x-7, body.y+1}, Direction);
+    ActiveItem->Draw({body.x-7, body.y+1}, Direction);
   }
   
   /*switch(selected){
@@ -536,8 +521,8 @@ void Character::UseActiveItem(){
   //Run Animation of Using Item
 
   //Run something like map->map->find(Block Player is facing)->second->HitBy(Item CurrItem)
-  if(map->map->count({body.x + blockLength, body.y}))
-    map->map->find({body.x + (-1*Direction+(Direction < 1))*blockLength, body.y})->second->HitBy(Inven->GetItem(Inven->GetActiveSlot()));
+  if(map->GetBlock({body.x + blockLength, body.y}) != nullptr)
+    map->GetBlock({body.x + (-1*Direction+(Direction < 1))*blockLength, body.y})->HitBy(Inven->GetItem(Inven->GetActiveSlot()));
 }
 
 bool Character::isSelected(){return selected;}
