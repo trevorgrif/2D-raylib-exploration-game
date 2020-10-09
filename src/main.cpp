@@ -209,6 +209,10 @@ void initMap(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map,
   //Create UnitTable
   unitTable->push_back(new Character(Rectangle{(float)0,(float)0,16,16},"Player", camera, map, itemTable));
   (*unitTable)[0]->Inven->SetItemAtSlot(itemTable->find("Wood Sword")->second,0);
+
+  //Setting Save file location
+  map->SetWorldName("world10");
+  map->CreateWorldSaveDir();
 }
 
 void MakeButtons(std::map<std::string,Button>* ButtonTable){

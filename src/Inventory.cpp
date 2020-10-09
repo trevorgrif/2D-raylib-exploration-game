@@ -42,6 +42,6 @@ Inventory::~Inventory(){
   //for(int i = 0; i < Items.size(); i++){
   //  delete Items[i];
   //}
-  std::cout << "\t\t Inventory Count --> " << _counter <<std::endl;
+  //std::cout << "\t\t Inventory Count --> " << _counter <<std::endl;
   //  Items.clear();
 }

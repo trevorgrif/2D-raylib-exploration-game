@@ -184,7 +184,7 @@ void Block::drawBlock(){
     break;
   case Undefined:
     DrawRectanglePro(this->body, Vector2{0,0}, 0.0f, YELLOW);
-    std::cout << NoiseValue << std::endl;
+    //std::cout << NoiseValue << std::endl;
     break;
   }
   

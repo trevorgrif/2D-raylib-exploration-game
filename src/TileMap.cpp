@@ -29,9 +29,13 @@ TileMap::TileMap(std::map<std::string,Item*>* itemTable){
       i++;
     }
   }
+  ChunkLength = 16;//ChunkList[0]->GetChunkLength();
   LoadChunkList();
-  ChunkLength = ChunkList[0]->GetChunkLength();
  
+}
+
+void TileMap::SetWorldName(std::string NewName){
+  this->WorldName = NewName;
 }
 
 void TileMap::ClearMap(){
@@ -89,22 +93,86 @@ void TileMap::DrawChunkList(){
 
 
 
-void TileMap::LoadChunkList(){
+void TileMap::LoadChunkList(){ //First Checks for ChunkSaveFile and either loads the file or creates one
   for(int i = 0; i < ChunkCount; i++){
     float NoiseArr[256];
-    for(int j = 0; j < 256; j++){
-      int col = j % 16;
-      int row = (j-(j%16))/16;
-      NoiseArr[j] = GetNoise(ChunkListCoor[i].x + col*blockLength,ChunkListCoor[i].y + row*blockLength);
+    //Determine if ChunkSave exist
+    if(SaveFileExist(Vector2{ChunkListCoor[i].x,ChunkListCoor[i].y})){
+      //Load the Data into NoiseArr and ShiftX/ShiftY
+      std::ifstream inStream;
+      inStream.open(ActiveChunkPath);
+      float sx[256],sy[256];
+      for(int j = 0; j < 256; j++){
+    	inStream >> sx[j] >> sy[j] >> NoiseArr[j];
+      }
+      inStream.close();
+      ChunkList[i] = new Chunk({ChunkListCoor[i].x,ChunkListCoor[i].y}, NoiseArr, sx, sy, itemTable);
     }
-    ChunkList[i] = new Chunk({ChunkListCoor[i].x,ChunkListCoor[i].y}, NoiseArr, itemTable);
+    else{
+      for(int j = 0; j < 256; j++){
+	int col = j % 16;
+	int row = (j-(j%16))/16;
+	NoiseArr[j] = GetNoise(ChunkListCoor[i].x + col*blockLength,ChunkListCoor[i].y + row*blockLength);
+      }
+      ChunkList[i] = new Chunk({ChunkListCoor[i].x,ChunkListCoor[i].y}, NoiseArr, itemTable);
+    }
   }
 }
 
-void TileMap::UnloadChunkList(){
-  for(int i = 0; i < 9; i++){
+void TileMap::UnloadChunkList(){ //Updates all ChunkSaveFiles and then deallocates the memory
+  for(int i = 0; i < ChunkCount; i++){
+    StoreChunkData(Vector2{ChunkListCoor[i].x,ChunkListCoor[i].y});
+  }
+    for(int i = 0; i < ChunkCount; i++){
     delete ChunkList[i];
   }
+}
+
+void TileMap::StoreChunkData(Vector2 Coor){ // Stores info on ActiveChunkPath
+  SetChunkSavePath(Coor);
+  std::ofstream outStream;
+  outStream.open(ActiveChunkPath, std::ofstream::out | std::ofstream::trunc); //Clears files data for reinputting
+
+  for(int i = 0; i < ChunkCount; i++){
+    if(ChunkListCoor[i].x == Coor.x && ChunkListCoor[i].y == Coor.y){
+      for(int j = 0; j < 256; j++){
+	Block* tempBlock = ChunkList[i]->GetBlockByIndex(j);
+	outStream <<  tempBlock->GetShiftX() << " " << tempBlock->GetShiftY() << " " << tempBlock->GetNoiseValue() << " ";
+      }
+    }
+  }
+  outStream.close();
+}
+
+bool TileMap::SaveFileExist(Vector2 Coor){ //Takes any GameRelative coors
+  SetChunkSavePath(Coor);
+  std::ifstream inStream;
+  inStream.open(ActiveChunkPath);
+  if(inStream.fail()){
+    inStream.close();
+    return false;
+  }
+  inStream.close();
+  return true;
+}
+
+void TileMap::SetChunkSavePath(Vector2 Coor){
+  Coor = GetChunkCoor(Coor);
+  ActiveChunkPath = "data/worlds/";
+  ActiveChunkPath.append(WorldName);
+  ActiveChunkPath.append("/chunks/");
+  ActiveChunkPath.append(std::to_string((int)Coor.x));
+  ActiveChunkPath.append(std::to_string((int)Coor.y));
+  ActiveChunkPath.append(".txt");
+}
+
+void TileMap::CreateWorldSaveDir(){
+  std::string TempPath;
+  TempPath = "data/worlds/";
+  TempPath.append(WorldName);
+  std::filesystem::create_directories(TempPath);
+  TempPath.append("/chunks");
+  std::filesystem::create_directories(TempPath);
 }
 
 float TileMap::getSeed(){return MapNoise.GetSeed();}

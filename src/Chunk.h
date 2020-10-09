@@ -14,6 +14,7 @@ class Chunk{
   
  public:
   Chunk(Vector2 Pos, float NoiseValues[256], std::map<std::string,Item*>* itemTable);
+  Chunk(Vector2 Pos,  float NoiseValues[256], float ShiftX[256], float ShiftY[256],  std::map<std::string,Item*>* itemTable);
   ~Chunk();
   
   void DrawChunk();
@@ -21,6 +22,7 @@ class Chunk{
   int GetChunkLength();
   
   Block* GetBlock(Vector2 Pos);
+  Block* GetBlockByIndex(int i);
 };
 
 #endif //CHUNK_H
