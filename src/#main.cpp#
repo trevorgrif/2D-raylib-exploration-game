@@ -277,8 +277,6 @@ void LoadWorldSaves(std::vector<Character*>* unitTable, Camera2D* camera, TileMa
 
 // All load needs to do is set the world name so that all data gets grabbed!!
 void LoadMap(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable, std::string WorldName){
-  //Create UnitTable ATTENTION:: Instead of loading a new character this is where it should pull player data from file.
-  //unitTable->push_back(new Character(Rectangle{(float)0,(float)0,16,16},"Player", camera, map, itemTable));
   (*unitTable)[0]->SetWorldName(WorldName);
   (*unitTable)[0]->Reset();
   (*unitTable)[0]->LoadData();

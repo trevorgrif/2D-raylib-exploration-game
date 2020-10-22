@@ -22,19 +22,20 @@ class TileMap{
   std::string ActiveChunkPath;
   std::string WorldName;
   
-  std::map<std::string,Item*>* itemTable;
+  std::vector<Item*>* itemTable;
 
   std::vector<Vector2> ChunkListCoor;
   std::vector<Chunk*> ChunkList;
   
  public:
-  TileMap(std::map<std::string,Item*>* itemTable);
+  TileMap(std::vector<Item*>* itemTable);
 
   void UpdateChunkList(Vector2 Center);
   void SetChunkSavePath(Vector2 Coor);
   void StoreChunkData(Vector2 Coor);
   void SetWorldName(std::string NewName);
   void CreateWorldSaveDir();
+  void CreateSeed();
   void setSeed(float seed);
   void UnloadChunkList();
   void DrawChunkList();

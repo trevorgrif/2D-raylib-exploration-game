@@ -3,8 +3,9 @@
 #include <iostream>
 
 std::vector<Texture2D> Block::BlockTextures;
-std::map<std::string, Item*>* Block::itemTable = new std::map<std::string,Item*>;
+std::vector<Item*>* Block::itemTable = new std::vector<Item*>;
 int Block::_counter = 0;
+Camera2D* Block::camera;
 
 float blockLength = 16;
 
@@ -18,9 +19,13 @@ float modBlockLength(float x){
       return (float)((int)x - ((int)x % (int)blockLength) - blockLength);
   }
 }
+
+void Block::SetCamera(Camera2D* newCamera){
+  camera = newCamera; 
+}
 //ITemTable is being loaded hundreds of times...
 //Creating New Block Constructor
-Block::Block(Rectangle body,float NoiseValue,std::map<std::string,Item*>* itemTable){
+Block::Block(Rectangle body,float NoiseValue,std::vector<Item*>* itemTable){
   std::random_device rd;
   std::mt19937 mt(rd());
   std::uniform_real_distribution<float> dist(-4, 4);
@@ -54,7 +59,7 @@ Block::Block(Rectangle body,float NoiseValue){
 }
 
 // Loading Block Data Constructor
-Block::Block(Rectangle body,float NoiseValue, float ShiftX, float ShiftY, std::map<std::string,Item*>* itemTable){
+Block::Block(Rectangle body,float NoiseValue, float ShiftX, float ShiftY, std::vector<Item*>* itemTable){
   this->body = body;
   this->NoiseValue = NoiseValue;
   this->itemTable = itemTable;
@@ -82,36 +87,36 @@ void Block::LoadTextures(){
 }
 
 void Block::EvaluateNoise(){
-  if(NoiseValue >= 0.2){
+  if(NoiseValue >= 0.5){
     setBlockType(DarkForest);
-    BlockInventory->SetItemAtSlot(itemTable->find("Tree")->second,0);
+    BlockInventory->SetItemAtSlot((*itemTable)[0],0);
     return;
   }
   else if(NoiseValue >= 0.01){
     setBlockType(Grass);
     return;
   }
-  else if(NoiseValue >= -0.025){
+  else if(NoiseValue >= -0.05){
     setBlockType(SandyGrass);
     return;
   }
-  else if(NoiseValue >= -0.045){
+  else if(NoiseValue >= -0.1){
     setBlockType(Sand);
     return;
   }
-  else if(NoiseValue >= -0.07){
+  else if(NoiseValue >= -0.2){
     setBlockType(WetSand);
     return;
   }
-  else if(NoiseValue >= -0.1){
+  else if(NoiseValue >= -0.4){
     setBlockType(ShallowWater);
     return;
   }
-  else if(NoiseValue >= -0.2){
+  else if(NoiseValue >= -0.5){
     setBlockType(Water);
     return;
   }
-  else if(NoiseValue >= -2.0){
+  else if(NoiseValue >= -1.0){
     setBlockType(DeepWater);
     return;
   }
@@ -155,37 +160,42 @@ void Block::setBlockType(BlockType newType){
   }
 }
 
-void Block::drawBlock(){
-  switch(block_type){
-  case DarkForest:
-    DrawTexture(BlockTextures[2],this->body.x,this->body.y,RAYWHITE);
-    BlockInventory->GetActiveItem()->Draw({body.x+ ShiftX,body.y+ShiftY}, 1);
-    break;
-  case Grass:
-    DrawTexture(BlockTextures[2],this->body.x,this->body.y,RAYWHITE);
-    break;
-  case SandyGrass:
-    DrawTexture(BlockTextures[5],this->body.x,this->body.y,RAYWHITE);
-    break;
-  case Sand:
-    DrawTexture(BlockTextures[1],this->body.x,this->body.y,RAYWHITE);
-    break;
-  case WetSand:
-    DrawTexture(BlockTextures[4],this->body.x,this->body.y,RAYWHITE);
-    break;
-  case ShallowWater:
-    DrawTexture(BlockTextures[0],this->body.x,this->body.y,RAYWHITE);
-    break;
-  case Water:
-    DrawTexture(BlockTextures[0],this->body.x,this->body.y,SKYBLUE);
-    break;
-  case DeepWater:
-    DrawTexture(BlockTextures[0],this->body.x,this->body.y,BLUE);
-    break;
-  case Undefined:
-    DrawRectanglePro(this->body, Vector2{0,0}, 0.0f, YELLOW);
-    //std::cout << NoiseValue << std::endl;
-    break;
+void Block::drawBlock(){ //Only Draw Block if it's inside the view
+  Vector2 ScreenUppLeft = GetScreenToWorld2D({0,0}, *camera);
+  Vector2 ScreenBotRight = GetScreenToWorld2D({GetScreenWidth(),GetScreenHeight()},*camera);
+  Rectangle view = {ScreenUppLeft.x - blockLength,ScreenUppLeft.y-blockLength,(ScreenBotRight.x - ScreenUppLeft.x)+blockLength, (ScreenBotRight.y - ScreenUppLeft.y)+blockLength};
+  if(CheckCollisionPointRec(Vector2{body.x,body.y},view)){
+    switch(block_type){
+    case DarkForest:
+      DrawTexture(BlockTextures[2],this->body.x,this->body.y,RAYWHITE);
+      BlockInventory->GetActiveItem()->Draw({body.x+ ShiftX,body.y+ShiftY}, 1);
+      break;
+    case Grass:
+      DrawTexture(BlockTextures[2],this->body.x,this->body.y,RAYWHITE);
+      break;
+    case SandyGrass:
+      DrawTexture(BlockTextures[5],this->body.x,this->body.y,RAYWHITE);
+      break;
+    case Sand:
+      DrawTexture(BlockTextures[1],this->body.x,this->body.y,RAYWHITE);
+      break;
+    case WetSand:
+      DrawTexture(BlockTextures[4],this->body.x,this->body.y,RAYWHITE);
+      break;
+    case ShallowWater:
+      DrawTexture(BlockTextures[0],this->body.x,this->body.y,RAYWHITE);
+      break;
+    case Water:
+      DrawTexture(BlockTextures[0],this->body.x,this->body.y,SKYBLUE);
+      break;
+    case DeepWater:
+      DrawTexture(BlockTextures[0],this->body.x,this->body.y,BLUE);
+      break;
+    case Undefined:
+      DrawRectanglePro(this->body, Vector2{0,0}, 0.0f, YELLOW);
+      //std::cout << NoiseValue << std::endl;
+      break;
+    }
   }
   
 }

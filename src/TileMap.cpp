@@ -4,11 +4,8 @@
 #include <random>
 #include <math.h>
 
-TileMap::TileMap(std::map<std::string,Item*>* itemTable){
-  MapNoise.SetNoiseType(FastNoise::Perlin);
-  MapNoise.SetFractalType(FastNoise::RigidMulti); //Need to understand this better
-  MapNoise.SetFractalOctaves(30);
-  GetRanSeed();
+TileMap::TileMap(std::vector<Item*>* itemTable){
+  MapNoise.SetNoiseType(FastNoise::Simplex);
   this->itemTable = itemTable;
 
   ChunkCount = ChunkRegWidth*ChunkRegHeight;
@@ -18,20 +15,7 @@ TileMap::TileMap(std::map<std::string,Item*>* itemTable){
 
   Vector2 Center{0,0};
   
-  int LowCol, UppCol, LowRow, UppRow, i = 0;
-  LowCol = -1*(ChunkRegWidth/2);
-  UppCol = (-1*LowCol) - ((ChunkRegWidth+1)%2);
-  LowRow = -1*(ChunkRegHeight/2);
-  UppRow = (-1*LowRow) - ((ChunkRegHeight+1)%2);   
-  for(int row = LowRow; row <= UppRow ; row++){
-    for(int col = LowCol; col <= UppCol; col++){
-      ChunkListCoor[i] = {Center.x + (col*ChunkLength*blockLength), Center.y + (row*ChunkLength*blockLength)};
-      i++;
-    }
-  }
   ChunkLength = 16;//ChunkList[0]->GetChunkLength();
-  LoadChunkList();
- 
 }
 
 void TileMap::SetWorldName(std::string NewName){
@@ -39,19 +23,42 @@ void TileMap::SetWorldName(std::string NewName){
 }
 
 void TileMap::ClearMap(){
-  /*for(auto it = map->begin(); it != map->cend();){
-    delete it->second;
-    it = map->erase(it);
-    }*/
+  
 }
 
-
+void TileMap::CreateSeed(){
+  //Check for existing seed
+  std::ifstream ifStream;
+  ifStream.open("data/worlds/" + WorldName + "/tilemapinfo.txt");
+  if(!ifStream.fail()){
+    //Get Seed and store
+    float x;
+    ifStream >> x;
+    std::cout << "Got the seed from file: " << x <<std::endl;
+    MapNoise.SetSeed(x);
+  }
+  else{
+    GetRanSeed();
+  }
+  return;
+}
 
 void TileMap::GetRanSeed(){
   std::random_device rd;
   std::mt19937 mt(rd());
   std::uniform_real_distribution<float> dist(-1000000, 1000000);
-  MapNoise.SetSeed(dist(mt));
+  setSeed(dist(mt));
+}
+
+void TileMap::setSeed(float seed){
+  MapNoise.SetSeed(seed);
+
+  //Store seed value in file
+  std::ofstream ifStream;
+  ifStream.open("data/worlds/" + WorldName + "/tilemapinfo.txt", std::ofstream::out | std::ofstream::trunc);
+  ifStream << getSeed();
+  ifStream.close();
+  
 }
 
 Block* TileMap::GetBlock(Vector2 v){ //Expecting v to be actual game space coords
@@ -177,7 +184,7 @@ void TileMap::CreateWorldSaveDir(){
 
 float TileMap::getSeed(){return MapNoise.GetSeed();}
 float TileMap::GetNoise(int x,int y){return MapNoise.GetNoise(x,y);}
-void TileMap::setSeed(float seed){MapNoise.SetSeed(seed);}
+
 
 Vector2 TileMap::GetChunkCoor(Vector2 Pos){
   float x0,y0;

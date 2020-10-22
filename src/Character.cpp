@@ -6,7 +6,7 @@ int Character::numSelected{0};
 BlockType Character::MCP_type{Undefined};
 Vector2 Character::mouseClickPoint;
 
-Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMap* map, std::map<std::string,Item*>* itemTable){
+Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable){
   Inven = new Inventory;
   this->body = Body;
   this->name = name;
@@ -24,7 +24,7 @@ Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMa
   
 }
 
-Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMap* map, std::map<std::string,Item*>* itemTable, std::string NameArr[10]){
+Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable, std::string NameArr[10]){
   Inven = new Inventory;
   this->body = Body;
   this->name = name;
@@ -37,7 +37,7 @@ Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMa
   this->itemTable = itemTable;
   for(int i = 0; i <= 9; i++){
     Inven->CreateSlot();
-    Inven->SetItemAtSlot(itemTable->find(NameArr[i])->second,i);
+    Inven->SetItemAtSlot((*itemTable)[2],i);
   }
 }
 
@@ -148,6 +148,7 @@ void Character::moveAlongPath(Vector2 &destin){ // Increments player.pos towards
   if(abs(body.y-y) <= speed*GetFrameTime())
     body.y = y;
   if(body.y == y && body.x == x){ // Arriving on a block
+    SaveData();
     startPos = Vector2{path.front().x,path.front().y};
     path.pop_front();
     if(path.size()){ // Just arrived and still moving check if next block space is blocked. If blocked reroute, if not claim next space
@@ -536,3 +537,44 @@ float Character::getHeight(){return body.height;}
 float Character::getWidth(){return body.width;}
 float Character::getX(){return body.x;}
 float Character::getY(){return body.y;}
+
+
+void Character::SetWorldName(std::string NewName){
+  this->WorldName = NewName;//SHould probably be static eh?
+}
+
+void Character::CreateWorldSaveDir(){
+  std::string TempPath;
+  TempPath = "data/worlds/";
+  TempPath.append(WorldName);
+  std::filesystem::create_directories(TempPath);
+  TempPath.append("/player");
+  std::filesystem::create_directories(TempPath);
+}
+
+void Character::LoadData(){
+  //Open file location and save data
+  std::ifstream iStream;
+  iStream.open("data/worlds/" + WorldName + "/player/status.txt");
+  if(!iStream.fail()){
+    iStream >> body.x >> body.y >> Direction;
+  }
+  else
+    std::cout << "ERROR FAILED TO LOAD" << "/data/worlds/" << WorldName << "/player/status.txt\n";
+}
+
+void Character::SaveData(){
+  //Open the file location and save data
+  std::ofstream oStream;
+  std::string path = "data/worlds/" + WorldName + "/player/status.txt";
+  oStream.open(path, std::ofstream::out | std::ofstream::trunc);
+  oStream << body.x << " " << body.y << " " << Direction;
+}
+
+void Character::Reset(){
+  body.x = 0;
+  body.y = 0;
+  health = 100;
+  Direction = 0;
+  path.clear();
+}

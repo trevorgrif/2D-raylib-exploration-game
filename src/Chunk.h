@@ -10,11 +10,11 @@ class Chunk{
   std::vector<Block*> BlockList;
   int ChunkLength = 16;
 
-  static std::map<std::string,Item*>* itemTable;
+  static std::vector<Item*>* itemTable;
   
  public:
-  Chunk(Vector2 Pos, float NoiseValues[256], std::map<std::string,Item*>* itemTable);
-  Chunk(Vector2 Pos,  float NoiseValues[256], float ShiftX[256], float ShiftY[256],  std::map<std::string,Item*>* itemTable);
+  Chunk(Vector2 Pos, float NoiseValues[256], std::vector<Item*>* itemTable);
+  Chunk(Vector2 Pos,  float NoiseValues[256], float ShiftX[256], float ShiftY[256],  std::vector<Item*>* itemTable);
   ~Chunk();
   
   void DrawChunk();

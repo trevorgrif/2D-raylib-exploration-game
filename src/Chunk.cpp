@@ -1,8 +1,8 @@
 #include "Chunk.h"
 
-std::map<std::string, Item*>* Chunk::itemTable = new std::map<std::string,Item*>;
+std::vector<Item*>* Chunk::itemTable = new std::vector<Item*>;
 
-Chunk::Chunk(Vector2 Pos, float NoiseValues[256], std::map<std::string,Item*>* itemTable){
+Chunk::Chunk(Vector2 Pos, float NoiseValues[256], std::vector<Item*>* itemTable){
   //Allocated Memory for BlockList
   this->ChunkPos = Pos;
   BlockList.resize(256);
@@ -14,7 +14,7 @@ Chunk::Chunk(Vector2 Pos, float NoiseValues[256], std::map<std::string,Item*>* i
   
 }
 
-Chunk::Chunk(Vector2 Pos,  float NoiseValues[256], float ShiftX[256], float ShiftY[256],  std::map<std::string,Item*>* itemTable){
+Chunk::Chunk(Vector2 Pos,  float NoiseValues[256], float ShiftX[256], float ShiftY[256],  std::vector<Item*>* itemTable){
   //Allocated Memory for BlockList
   this->ChunkPos = Pos;
   BlockList.resize(256);

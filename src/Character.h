@@ -27,7 +27,8 @@ class Character{
   std::list<Vector2> path;
   Camera2D* camera;
  
-  std::map<std::string,Item*>* itemTable;
+  std::vector<Item*>* itemTable;
+  std::string WorldName;
   
   Vector2 currV;
   Vector2 startPos;
@@ -47,7 +48,7 @@ class Character{
   int RelativeGridDim{4*16*(int)blockLength};
   int Direction{0}; // 0 == Right 1 == Left
 
-  float speed{10*blockLength}; //Note: unaffected by Monitor FPS since GetFrameTime() is called when moving
+  float speed{7.5*blockLength}; //Note: unaffected by Monitor FPS since GetFrameTime() is called when moving
   float displacement;
   float health{100};
   
@@ -60,8 +61,8 @@ class Character{
   Texture2D AvatarSkin;
   
  public:
-  Character(Rectangle Body, const char * name, Camera2D* camera, TileMap* map, std::map<std::string,Item*>* itemTable);
-  Character(Rectangle Body, const char * name, Camera2D* camera, TileMap* map, std::map<std::string,Item*>* itemTable, std::string NameArr[10]);
+  Character(Rectangle Body, const char * name, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable);
+  Character(Rectangle Body, const char * name, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable, std::string NameArr[10]);
   Character(){};
   ~Character();
 
@@ -93,8 +94,13 @@ class Character{
   void analyzeMCP(Vector2 MCP);
   void deselect();
   void setHealth(float newHealth);
+  void SetWorldName(std::string NewName);
   void select();
   void draw();
+  void SaveData();
+  void LoadData();
+  void Reset();
+  void CreateWorldSaveDir();
 };
 #endif //CHARACTER_H
 
