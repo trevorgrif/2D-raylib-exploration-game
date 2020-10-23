@@ -433,7 +433,7 @@ void Character::draw(){
     timer += GetFrameTime();
     if(timer > 0.25f){
       timer = 0.0f;
-      frame = (frame % 4) + 1;
+      frame = (frame % 8) + 1;
     }
     DrawTextureRec(AvatarSkin, {blockLength*frame,Direction*blockLength,blockLength,blockLength},{body.x,body.y},RAYWHITE);
     switch(frame){

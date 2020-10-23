@@ -337,6 +337,10 @@ void EnterWorldName(std::vector<Character*>* unitTable, Camera2D* camera, TileMa
   //Draw Text on Screen
   Rectangle TextBox{screenWidth/2 - 200, screenHeight/2 - 50, 400,100};
   Rectangle Text{TextBox.x+10,TextBox.y+30,380,40};
+  Rectangle Instruct1{TextBox.x, TextBox.y - 30, 400,30};
+  DrawTextRec(GetFontDefault(), "Enter World Name:", Instruct1, 30.0f,1.0f, true, BLACK);
+  Rectangle Instruct2{TextBox.x, TextBox.y + 100, 400,30};
+  DrawTextRec(GetFontDefault(), "then press ENTER", Instruct2, 30.0f,1.0f, true, BLACK);
   DrawRectangleLinesEx(TextBox, 3,BLACK);
   DrawTextRec(GetFontDefault(), WorldName.c_str(), Text, 40.0f,1.0f,true, BLACK);
   
