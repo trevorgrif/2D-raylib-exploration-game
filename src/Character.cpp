@@ -3,10 +3,11 @@
 #include <math.h>
 
 int Character::numSelected{0};
-BlockType Character::MCP_type{Undefined};
+global_enums::OBJECTS Character::MCP_type;
 Vector2 Character::mouseClickPoint;
+TileMap* Character::map;
 
-Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable){
+Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMap* map){
   Inven = new Inventory;
   this->body = Body;
   this->name = name;
@@ -16,7 +17,6 @@ Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMa
   this->startPos.y = this->body.y;
   this->select();
   this->AvatarSkin = LoadTexture("textures/player/avatar.png"); //Careful of this if ever loading multiple characters
-  this->itemTable = itemTable;
   
  
   for(int i = 0; i <= 9; i++)
@@ -24,7 +24,7 @@ Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMa
   
 }
 
-Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable, std::string NameArr[10]){
+Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMap* map, std::string NameArr[10]){
   Inven = new Inventory;
   this->body = Body;
   this->name = name;
@@ -34,10 +34,8 @@ Character::Character(Rectangle Body,  const char* name, Camera2D* camera, TileMa
   this->startPos.y = this->body.y;
   this->select();
   this->AvatarSkin = LoadTexture("textures/player/avatar.png"); //Careful of this if ever loading multiple characters
-  this->itemTable = itemTable;
   for(int i = 0; i <= 9; i++){
     Inven->CreateSlot();
-    Inven->SetItemAtSlot((*itemTable)[2],i);
   }
 }
 
@@ -111,7 +109,7 @@ void Character::updateUnit(Camera2D* camera){ // Interprets mouse action and upd
       findNearestFreeBlock(); // Path finding (Just clears path rn
       findPath(destin);
 	
-      MCP_type = Undefined;
+      //MCP_type = Undefined;
     }  
     markSet = false;
     regionActive = false;
@@ -177,12 +175,6 @@ void Character::moveAlongPath(Vector2 &destin){ // Increments player.pos towards
 
 void Character::findPath(Vector2 destin){ //A* Search path finding
   int dispX, dispY;
-
-  //May be useful later but undefined right now
-  /*if(map->map->find(Vector2{destin.x,destin.y})->second->getBlockType() == BlockType::structSpace){ 
-    std::cout << "It's a structure\n";
-    return;
-    }*/
 
   //Determine the Destination Point on the Relative Grid
   destin.x = destin.x/blockLength;
@@ -428,8 +420,8 @@ float Character::computeH(int row, int col, Vector2 destin){
 void Character::draw(){
   static int frame = 1;
   static float timer = 0.0f;
-  Item* ActiveItem = Inven->GetActiveItem();
-  if(path.size()){ // Is Moving
+  Object* ActiveItem = Inven->GetActiveItem();
+  if(isMoving){ // Is Moving
     timer += GetFrameTime();
     if(timer > 0.25f){
       timer = 0.0f;
@@ -439,44 +431,43 @@ void Character::draw(){
     switch(frame){
     case 1:
       if(!Direction)
-	ActiveItem->Draw({body.x+8, body.y}, Direction);
+	ActiveItem->DrawBelow({body.x+8, body.y}, Direction);
       else
-	ActiveItem->Draw({body.x-7, body.y}, Direction);
+	ActiveItem->DrawBelow({body.x-7, body.y}, Direction);
       break;
     case 2:
       if(!Direction)
-	ActiveItem->Draw({body.x+8, body.y}, Direction);
+	ActiveItem->DrawBelow({body.x+8, body.y}, Direction);
       else
-	ActiveItem->Draw({body.x-8, body.y}, Direction);
+	ActiveItem->DrawBelow({body.x-8, body.y}, Direction);
       break;
     case 3:
       if(!Direction)
-	ActiveItem->Draw({body.x+9, body.y-1}, Direction);
+	ActiveItem->DrawBelow({body.x+9, body.y-1}, Direction);
       else
-	ActiveItem->Draw({body.x-9, body.y-1}, Direction);
+	ActiveItem->DrawBelow({body.x-9, body.y-1}, Direction);
       break;
     case 4:
       if(!Direction)
-	ActiveItem->Draw({body.x+8, body.y}, Direction);
+	ActiveItem->DrawBelow({body.x+8, body.y}, Direction);
       else
-	ActiveItem->Draw({body.x-8, body.y}, Direction);
+	ActiveItem->DrawBelow({body.x-8, body.y}, Direction);
       break;
-      }
+    default:
+      if(!Direction)
+	ActiveItem->DrawBelow({body.x+8, body.y}, Direction);
+      else
+	ActiveItem->DrawBelow({body.x-8, body.y}, Direction);
+      break;
+    }
   }
   else{ // Is still
     DrawTextureRec(AvatarSkin, {0,Direction*blockLength,blockLength,blockLength},{body.x,body.y},RAYWHITE);
     if(!Direction)
-      ActiveItem->Draw({body.x+7, body.y+1}, Direction);
+      ActiveItem->DrawBelow({body.x+7, body.y+1}, Direction);
     else
-    ActiveItem->Draw({body.x-7, body.y+1}, Direction);
+    ActiveItem->DrawBelow({body.x-7, body.y+1}, Direction);
   }
-  
-  /*switch(selected){
-  case true:
-    DrawRectanglePro(Rectangle{body.x,body.y-(blockLength/5),body.width*(this->health/100),blockLength/10}, Vector2{0,0},0.0f,GREEN);
-    DrawTexture(AvatarSkin, body.x,body.y,RAYWHITE);
-    break;
-    }*/
   
 }
 
@@ -509,21 +500,72 @@ void Character::KeyPressAnalysis(){
   case KEY_NINE:
     Inven->SetActiveSlot(8);
     break;
-  case KEY_ZERO:
-    Inven->SetActiveSlot(9);
+  case (KEY_E+32):
+    Inven->SwitchOpen();
     break;
   case KEY_SPACE:
     UseActiveItem();
     break;
+  default:
+    break;
   }
+  
+  if(IsKeyDown(KEY_W)){
+    isMoving = true;
+    if(map->GetBlock({body.x,body.y-speed*GetFrameTime()})->isBlocked() == false && map->GetBlock({body.x+16,body.y-speed*GetFrameTime()})->isBlocked() == false)
+      body.y = body.y-speed*GetFrameTime();
+  }
+  if(IsKeyDown(KEY_S)){
+    isMoving = true;
+    if(map->GetBlock({body.x,body.y+16+speed*GetFrameTime()})->isBlocked() == false && map->GetBlock({body.x + 16,body.y+16+speed*GetFrameTime()})->isBlocked() == false)
+      body.y = body.y+speed*GetFrameTime();
+  }
+  if(IsKeyDown(KEY_A)){
+    isMoving = true;
+    Direction = 1;
+    if(map->GetBlock({body.x-speed*GetFrameTime(),body.y})->isBlocked() == false && map->GetBlock({body.x-speed*GetFrameTime(),body.y+16})->isBlocked() == false)
+      body.x = body.x-speed*GetFrameTime();
+  }
+  if(IsKeyDown(KEY_D)){//Could change to measure player width instead of blockLength
+    isMoving = true;
+    Direction = 0;
+    if(map->GetBlock({body.x+blockLength+speed*GetFrameTime(),body.y})->isBlocked() == false && map->GetBlock({body.x+blockLength+speed*GetFrameTime(),body.y+16})->isBlocked() == false)
+      body.x = body.x+speed*GetFrameTime();
+  }
+  if(!IsKeyDown(KEY_W) && !IsKeyDown(KEY_S) && !IsKeyDown(KEY_A) && !IsKeyDown(KEY_D)){
+    isMoving = false;
+  }
+  if(IsKeyPressed(KEY_LEFT_SHIFT)){
+    PickItemUp();
+  }
+  SaveData();
 }
 
 void Character::UseActiveItem(){
-  //Run Animation of Using Item
+  //Run Animation of using item
 
-  //Run something like map->map->find(Block Player is facing)->second->HitBy(Item CurrItem)
-  if(map->GetBlock({body.x + blockLength, body.y}) != nullptr)
-    map->GetBlock({body.x + (-1*Direction+(Direction < 1))*blockLength, body.y})->HitBy(Inven->GetItem(Inven->GetActiveSlot()));
+  //Tell Chunk Player is in to run CheckObjectInteraction
+  Inven->GetActiveItem()->SetPosX(body.x+16 - (2*Direction*16)); //Pretty inaccurate
+  Inven->GetActiveItem()->SetPosY(body.y+3);
+  map->CheckItemInteraction(Inven->GetActiveItem());
+  
+}
+
+void Character::PickItemUp(){
+  Object * temp = new Empty();
+  temp->SetPosX(body.x + 16 - (2*Direction*16));
+  temp->SetPosY(body.y);
+  int FreeSpace = Inven->AvailableSpace();
+  if(FreeSpace){
+    Object * RecievedObject = map->CheckItemPickUp(temp);
+    if(RecievedObject != NULL){
+      if(CanLift(RecievedObject)){
+	Inven->SetItemAtSlot(RecievedObject,FreeSpace-1);
+	map->RemoveObjectByPointer(RecievedObject);
+      }
+    }
+  }
+  delete temp;
 }
 
 bool Character::isSelected(){return selected;}
@@ -563,6 +605,8 @@ void Character::LoadData(){
     std::cout << "ERROR FAILED TO LOAD" << "/data/worlds/" << WorldName << "/player/status.txt\n";
 }
 
+Inventory* Character::GetInventory(){ return Inven;}
+
 void Character::SaveData(){
   //Open the file location and save data
   std::ofstream oStream;
@@ -578,3 +622,9 @@ void Character::Reset(){
   Direction = 0;
   path.clear();
 }
+
+bool Character::CanLift(Object* ObjectPtr){
+  return (Strength >= ObjectPtr->GetWeight());
+}
+
+TileMap* Character::GetMap(){return map;}

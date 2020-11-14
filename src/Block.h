@@ -3,22 +3,11 @@
 #include <iostream>
 #include "Inventory.h"
 #include "raylib.h"
+#include "textures.h"
 #include <time.h>
 #include <stdlib.h>
 #include <map>
 #include <vector>
-
-enum BlockType{
-	       DarkForest,
-	       Grass,
-	       Sand,
-	       ShallowWater,
-	       Water,
-	       DeepWater,
-	       WetSand,
-	       SandyGrass,
-	       Undefined
-};
 
 extern float blockLength;
 extern float modBlockLength(float x);
@@ -42,45 +31,42 @@ public:
 class Block{
 private:
   Rectangle body = Rectangle{0,0,0,0};
+  
   bool blocked{false};
-  Color color{GREEN};
-  BlockType block_type;
-  float NoiseValue;
-  Vector2 GradValue;
-  int chunkLength = 20;
 
+  Color color{GREEN};
+
+  global_enums::OBJECTS block_type;
+
+  float TerrNoiseValue;
+  float BlueNoiseValue;
   float ShiftX, ShiftY;
 
-  Inventory* BlockInventory = new Inventory();
+  Vector2 GradValue;
 
-  static std::vector<Texture2D> BlockTextures;
-  static std::vector<Item*>* itemTable;
+  int chunkLength = 20;
+
   static Camera2D* camera;
-  static int _counter;
 		  
 public:
-  Block(Rectangle body){this->body = body; this->block_type = Undefined;};
-  Block(Rectangle body,float NoiseValue,std::vector<Item*>* itemTable);
-  Block(Rectangle body,float NoiseValue);
-  Block(Rectangle body,float NoiseValue, float ShiftX, float ShiftY, std::vector<Item*>* itemTable);
+  Block(Rectangle body){this->body = body;};
+  Block(Rectangle body, float TerrNoiseValue, float BlueNoiseValue);
+  Block(Rectangle body, float TerrNoiseValue, float BlueNoiseValue, float ShiftX, float ShiftY);
   Block(){};
-  ~Block();
   
   Rectangle getRect(){return this->body;};
   bool isBlocked(){return blocked;};
   void setX(float x){this->body.x = x;};
   void setY(float y){this->body.y = y;};
   void setColor(Color color){this->color = color;};
+  float GetBlueNoise();
   Color getColor(){return this->color;};
-  BlockType getBlockType();
-  void setBlockType(BlockType newType);
+  global_enums::OBJECTS getBlockType();
+  void setBlockType(global_enums::OBJECTS newType);
   void drawBlock();
-  void drawItem();
   void EvaluateNoise();
-  void LoadTextures();
-  void HitBy(Item* ActiveItem);
   void SetCamera(Camera2D* newCamera);
-  float GetNoiseValue(){return NoiseValue;};
+  float GetNoiseValue(){return TerrNoiseValue;};
   float GetShiftX();
   float GetShiftY();
   

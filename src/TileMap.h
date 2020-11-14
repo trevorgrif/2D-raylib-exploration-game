@@ -5,6 +5,7 @@
 #include "Chunk.h"
 #include "FastNoise.h"
 #include "Inventory.h"
+#include "object.h"
 #include <map>
 #include <vector>
 #include <string>
@@ -13,7 +14,8 @@
 
 class TileMap{
  private:
-  FastNoise MapNoise;
+  FastNoise TerrainNoise;
+  FastNoise BlueNoise;
   int ChunkLength;
   int ChunkCount;
   int ChunkRegWidth{5};
@@ -21,16 +23,17 @@ class TileMap{
 
   std::string ActiveChunkPath;
   std::string WorldName;
-  
-  std::vector<Item*>* itemTable;
 
   std::vector<Vector2> ChunkListCoor;
   std::vector<Chunk*> ChunkList;
   
  public:
-  TileMap(std::vector<Item*>* itemTable);
+  TileMap();
+  ~TileMap();
 
-  void UpdateChunkList(Vector2 Center);
+  void CheckItemInteraction(Object* ItemPtr);
+  void RemoveObjectByPointer(Object * ObjectPtr);
+  void UpdateChunkList(Vector2 Center); //Updates chunks visible to player (read: Loaded Chunks)
   void SetChunkSavePath(Vector2 Coor);
   void StoreChunkData(Vector2 Coor);
   void SetWorldName(std::string NewName);
@@ -38,7 +41,8 @@ class TileMap{
   void CreateSeed();
   void setSeed(float seed);
   void UnloadChunkList();
-  void DrawChunkList();
+  void DrawChunkListBelow();
+  void DrawChunkListAbove();
   void LoadChunkList();
   void GetRanSeed();
   void ClearMap();
@@ -51,6 +55,7 @@ class TileMap{
   Vector2 GetChunkCoor(Vector2 Pos); //Returns Upper left Coor of the Chunk
 
   Block* GetBlock(Vector2 v);
+  Object* CheckItemPickUp(Object * ItemPtr);
   
 };
 

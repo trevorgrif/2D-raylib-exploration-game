@@ -7,12 +7,14 @@ class Button{
  private:
   Rectangle Rec;
   Rectangle RecOffSet;
-  Color color;
-  Color hoverColor;
+  Color PrimaryColor;
+  Color AccentColor;
   Vector2 origin;
   float rotation;
   const char * text;
-  Font FontInUse;
+
+  static Font FontInUse;
+  static int _count;
   
  public:
   Button(const char * text, float x, float y, float width, float height,Vector2 origin, float rotatio);
@@ -25,12 +27,11 @@ class Button{
   Vector2 getOrigin();
   float getRotation();
   Rectangle getRect();
-  Color getColor();
+  Color getPrimaryColor();
 
   // Customization Methods
-  void setColor(Color newColor);
-  void setHoverColor(Color newColor);
-  void setButtonColor(Color newColor);
+  void setPrimaryColor(Color newColor);
+  void setAccentColor(Color newColor);
 
   // Misc Methods
   void Draw();

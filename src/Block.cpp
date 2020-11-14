@@ -2,9 +2,6 @@
 #include <random>
 #include <iostream>
 
-std::vector<Texture2D> Block::BlockTextures;
-std::vector<Item*>* Block::itemTable = new std::vector<Item*>;
-int Block::_counter = 0;
 Camera2D* Block::camera;
 
 float blockLength = 16;
@@ -25,7 +22,7 @@ void Block::SetCamera(Camera2D* newCamera){
 }
 //ITemTable is being loaded hundreds of times...
 //Creating New Block Constructor
-Block::Block(Rectangle body,float NoiseValue,std::vector<Item*>* itemTable){
+Block::Block(Rectangle body,float TerrNoiseValue,float BlueNoiseValue){
   std::random_device rd;
   std::mt19937 mt(rd());
   std::uniform_real_distribution<float> dist(-4, 4);
@@ -34,127 +31,82 @@ Block::Block(Rectangle body,float NoiseValue,std::vector<Item*>* itemTable){
   ShiftY = dist2(mt);
 
   this->body = body;
-  this->NoiseValue = NoiseValue;
-  this->itemTable = itemTable;
-  this->BlockInventory->CreateSlot();
+  this->TerrNoiseValue = TerrNoiseValue;
+  this->BlueNoiseValue = BlueNoiseValue;
   EvaluateNoise();
-  LoadTextures();
-  _counter++;
-}
-
-Block::Block(Rectangle body,float NoiseValue){
-  std::random_device rd;
-  std::mt19937 mt(rd());
-  std::uniform_real_distribution<float> dist(-4, 4);
-  std::uniform_real_distribution<float> dist2(-6, 2);
-  ShiftX = dist(mt);
-  ShiftY = dist2(mt);
-  
-  this->body = body;
-  this->NoiseValue = NoiseValue;
-  this->BlockInventory->CreateSlot();
-  EvaluateNoise();
-  LoadTextures();
-  _counter++;
 }
 
 // Loading Block Data Constructor
-Block::Block(Rectangle body,float NoiseValue, float ShiftX, float ShiftY, std::vector<Item*>* itemTable){
+Block::Block(Rectangle body,float TerrNoiseValue,float BlueNoiseValue, float ShiftX, float ShiftY){
   this->body = body;
-  this->NoiseValue = NoiseValue;
-  this->itemTable = itemTable;
+  this->TerrNoiseValue = TerrNoiseValue;
+  this->BlueNoiseValue = BlueNoiseValue;
   this->ShiftX = ShiftX;
   this->ShiftY = ShiftY;
-  this->BlockInventory->CreateSlot();
   EvaluateNoise();
-  LoadTextures();
-  _counter++;
-}
-
-Block::~Block(){
-  delete BlockInventory;
-}
-
-void Block::LoadTextures(){
-  if(_counter == 1){
-    BlockTextures.push_back(LoadTexture("textures/blocks/water.png"));
-    BlockTextures.push_back(LoadTexture("textures/blocks/sand.png"));
-    BlockTextures.push_back(LoadTexture("textures/blocks/grass.png"));
-    BlockTextures.push_back(LoadTexture("textures/blocks/forest.png"));
-    BlockTextures.push_back(LoadTexture("textures/blocks/wetsand.png"));
-    BlockTextures.push_back(LoadTexture("textures/blocks/sandygrass.png"));
-  }
 }
 
 void Block::EvaluateNoise(){
-  if(NoiseValue >= 0.5){
-    setBlockType(DarkForest);
-    BlockInventory->SetItemAtSlot((*itemTable)[0],0);
+  if(TerrNoiseValue >= 0.25){
+    setBlockType(global_enums::OBJECTS::Forest);
     return;
   }
-  else if(NoiseValue >= 0.01){
-    setBlockType(Grass);
+  else if(TerrNoiseValue >= 0.01){
+    setBlockType(global_enums::OBJECTS::Grass);
     return;
   }
-  else if(NoiseValue >= -0.05){
-    setBlockType(SandyGrass);
+  else if(TerrNoiseValue >= -0.05){
+    setBlockType(global_enums::OBJECTS::SandyGrass);
     return;
   }
-  else if(NoiseValue >= -0.1){
-    setBlockType(Sand);
+  else if(TerrNoiseValue >= -0.1){
+    setBlockType(global_enums::OBJECTS::Sand);
     return;
   }
-  else if(NoiseValue >= -0.2){
-    setBlockType(WetSand);
+  else if(TerrNoiseValue >= -0.2){
+    setBlockType(global_enums::OBJECTS::WetSand);
     return;
   }
-  else if(NoiseValue >= -0.4){
-    setBlockType(ShallowWater);
+  else if(TerrNoiseValue >= -0.4){
+    setBlockType(global_enums::OBJECTS::ShallowWater);
     return;
   }
-  else if(NoiseValue >= -0.5){
-    setBlockType(Water);
+  else if(TerrNoiseValue >= -0.5){
+    setBlockType(global_enums::OBJECTS::Water);
     return;
   }
-  else if(NoiseValue >= -1.0){
-    setBlockType(DeepWater);
-    return;
-  }
-  else{
-    setBlockType(Undefined);
+  else if(TerrNoiseValue >= -1.0){
+    setBlockType(global_enums::OBJECTS::DeepWater);
     return;
   }
   
 }
 
-void Block::setBlockType(BlockType newType){
+void Block::setBlockType(global_enums::OBJECTS newType){
   this->block_type = newType;
   switch(block_type){
-  case DarkForest:
+  case global_enums::OBJECTS::Forest:
     this->blocked = false;
     break;
-  case Grass:
+  case global_enums::OBJECTS::Grass:
     this->blocked = false;
     break;
-  case SandyGrass:
+  case global_enums::OBJECTS::SandyGrass:
     this->blocked = false;
     break;
-  case Sand:
+  case global_enums::OBJECTS::Sand:
     this->blocked = false;
     break;
-  case WetSand:
+  case global_enums::OBJECTS::WetSand:
     this->blocked = false;
     break;
-  case ShallowWater:
+  case global_enums::OBJECTS::ShallowWater:
     this->blocked = true;
     break;
-  case Water:
+  case global_enums::OBJECTS::Water:
     this->blocked = true;
     break;
-  case DeepWater:
-    this->blocked = true;
-    break;
-  case Undefined:
+  case global_enums::OBJECTS::DeepWater:
     this->blocked = true;
     break;
   }
@@ -165,92 +117,13 @@ void Block::drawBlock(){ //Only Draw Block if it's inside the view
   Vector2 ScreenBotRight = GetScreenToWorld2D({GetScreenWidth(),GetScreenHeight()},*camera);
   Rectangle view = {ScreenUppLeft.x - blockLength,ScreenUppLeft.y-blockLength,(ScreenBotRight.x - ScreenUppLeft.x)+blockLength, (ScreenBotRight.y - ScreenUppLeft.y)+blockLength};
   if(CheckCollisionPointRec(Vector2{body.x,body.y},view)){
-    switch(block_type){
-    case DarkForest:
-      DrawTexture(BlockTextures[2],this->body.x,this->body.y,RAYWHITE);
-      BlockInventory->GetActiveItem()->Draw({body.x+ ShiftX,body.y+ShiftY}, 1);
-      break;
-    case Grass:
-      DrawTexture(BlockTextures[2],this->body.x,this->body.y,RAYWHITE);
-      break;
-    case SandyGrass:
-      DrawTexture(BlockTextures[5],this->body.x,this->body.y,RAYWHITE);
-      break;
-    case Sand:
-      DrawTexture(BlockTextures[1],this->body.x,this->body.y,RAYWHITE);
-      break;
-    case WetSand:
-      DrawTexture(BlockTextures[4],this->body.x,this->body.y,RAYWHITE);
-      break;
-    case ShallowWater:
-      DrawTexture(BlockTextures[0],this->body.x,this->body.y,RAYWHITE);
-      break;
-    case Water:
-      DrawTexture(BlockTextures[0],this->body.x,this->body.y,SKYBLUE);
-      break;
-    case DeepWater:
-      DrawTexture(BlockTextures[0],this->body.x,this->body.y,BLUE);
-      break;
-    case Undefined:
-      DrawRectanglePro(this->body, Vector2{0,0}, 0.0f, YELLOW);
-      //std::cout << NoiseValue << std::endl;
-      break;
-    }
+    DrawTexture(Textures.GetTexture(block_type),this->body.x,this->body.y, RAYWHITE);
   }
   
 }
 
-void Block::drawItem(){
-  switch(block_type){
-  case DarkForest:
-    BlockInventory->GetActiveItem()->Draw({body.x+ ShiftX,body.y+ShiftY}, 1);
-    break;
-  case Grass:
-    break;
-  case SandyGrass:
-    break;
-  case Sand:
-    break;
-  case WetSand:
-    break;
-  case ShallowWater:
-    break;
-  case Water:
-    break;
-  case DeepWater:
-    break;
-  case Undefined:
-    break;
-  }
-}
-
-void Block::HitBy(Item* ActiveItem){
-  if(ActiveItem->Name == "Wood Sword"){
-    switch(block_type){
-    case DarkForest:
-      setBlockType(Grass);
-      NoiseValue = 0.011;
-    case Grass:
-      break;
-    case SandyGrass:
-      break;
-    case Sand:
-      break;
-    case WetSand:
-      break;
-    case ShallowWater:
-      break;
-    case Water:
-      break;
-    case DeepWater:
-      break;
-    case Undefined:
-      break;
-    }
-  }
-}
-
-BlockType Block::getBlockType(){return block_type;}
+global_enums::OBJECTS Block::getBlockType(){return block_type;}
+float Block::GetBlueNoise(){return BlueNoiseValue;}
 
 float Block::GetShiftX(){return ShiftX;}
 float Block::GetShiftY(){return ShiftY;}

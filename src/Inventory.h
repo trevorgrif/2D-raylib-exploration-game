@@ -2,16 +2,16 @@
 #define INVENTORY_H
 
 #include "raylib.h"
-#include "Item.h"
+#include "object.h"
 #include <iostream>
 #include <vector>
 
 class Inventory{
  private:
-  bool DisplayInv = true;
+  bool Open = false;
   int ActiveSlot{0};
-  std::vector<Item*> Items;
-  Item* EmptyItem;
+  std::vector<Object*> Items;
+  Object* EmptyItem;
 
   static int _counter;
   
@@ -20,14 +20,19 @@ class Inventory{
   ~Inventory();
 
 
-  void Draw();
-  void SetItemAtSlot(Item* NewItem, int Pos);
+  void Draw(Camera2D * Camera);
+  void SetItemAtSlot(Object* NewItem, int Pos);
   void CreateSlot();
   void RemoveItem(int Pos);
   void SetActiveSlot(int Pos);
+  void SwitchOpen();
   
-  Item* GetItem(int Pos);
-  Item* GetActiveItem();
+  Object* GetItem(int Pos);
+  Object* GetActiveItem();
+
+  bool IsOpen();
+
+  int AvailableSpace();
   
   int GetActiveSlot();
   int GetSize();

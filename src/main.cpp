@@ -5,10 +5,16 @@
 #include "Character.h"
 #include "TileMap.h"
 #include "FastNoise.h"
+#include "daytimer.h"
 #include <map>
 #include <fstream>
 #include <filesystem>
 
+#include <math.h>
+
+#include <thread>
+
+//Globals I need to get rid of eventually
 bool loadMainMenu = true;
 bool GameOver = false;
 bool GamePause = false;
@@ -18,31 +24,34 @@ bool LOADINGSAVE = false;
 float screenWidth;
 float screenHeight;
 
-// Primary Functions
-void MainMenu(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map, std::map<std::string,Button>* ButtonTable, std::vector<Item*>* itemTable,std::string WorldName);
-void GameLogic(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map);
-void GameDraw(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map);
-void MakeButtons(std::map<std::string,Button>* ButtonTable);
-void PauseDraw(std::vector<Character*>* unitTable,std::map<std::string,Button>* ButtonTable, std::string SaveName, TileMap* map);
-void LoadMap(std::vector<Character*>* unitTable,Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable, std::string WorldName);
-void LoadItemData(std::vector<Item*>* itemTable);
-void EnterWorldName(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable, std::string &WorldName);
-void LoadWorldSaves(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable, std::string &WorldName);
+DayTimer DayTime;
+
+//Menu Functions
+void MainMenu(std::map<std::string,Button>* ButtonTable);
+void EnterWorldName(Camera2D *camera, std::vector<Character*>*& unitTable, std::string &WorldName);
+void LoadWorldSaves(Camera2D *camera, std::vector<Character*>*& unitTable, std::string &WorldName);
+void PauseDraw(std::vector<Character*>* unitTable, std::map<std::string,Button>* ButtonTable);
 void EndScreen();
 
-// Helper Functions
+//Initialization Functions
+void MakeButtons(std::map<std::string,Button>* ButtonTable);
+void LoadMap(Camera2D *camera, std::vector<Character*>*& unitTable, std::string WorldName);
+void initMap(Camera2D *camera, std::vector<Character*>*& unitTable, std::string WorldName);
+void ClearGameData(std::vector<Character*>*& unitTable);
+
+//Game Processing Functions
+void GameLogic(std::vector<Character*>* unitTable, Camera2D* camera);
+void GameDraw(std::vector<Character*>* unitTable, Camera2D* camera);
 void CameraUpdate(Camera2D* Camera, std::vector<Character*>* unitTable);
-void initMap(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable, std::string WorldName);
 
 int main(void){
-  std::string testSave = "test.txt";
-  std::string WorldName; 
-  
   // Initialization: Screen, Camera, List Declarations
-  InitWindow(screenWidth, screenHeight, "Simple Game");
+  InitWindow(screenWidth, screenHeight, "Less-Simple Game");
   screenWidth = GetScreenWidth();
   screenHeight = GetScreenHeight();
   ToggleFullscreen();
+
+  Textures.LoadTextures();
 
   Camera2D* camera = new Camera2D;//TODO: check memory leak
   camera->offset = {screenWidth/2, screenHeight/2 };
@@ -52,34 +61,31 @@ int main(void){
 
   Block tempCam;
   tempCam.SetCamera(camera);
-  
+
   std::vector<Character*>* unitTable = new std::vector<Character*>; //Need to delete
-  std::vector<Item*>* itemTable = new std::vector<Item*>; //Need to delete
-  LoadItemData(itemTable);
-  TileMap* map = new TileMap(itemTable);
-  unitTable->push_back(new Character(Rectangle{(float)0,(float)0,16,16},"Player", camera, map, itemTable));
   
   std::map<std::string,Button>* ButtonTable = new std::map<std::string,Button>; // Need to delete
   MakeButtons(ButtonTable);
+  std::string WorldName;
   
   // Main game loop
-  while (!WindowShouldClose())    // Detect window close button or ESC key
+  while(!WindowShouldClose())    // Detect window close button or ESC key
     {
       if(loadMainMenu == true){
 	BeginDrawing();
-	MainMenu(unitTable,camera, map, ButtonTable, itemTable, WorldName); //ideally scene elements pulled from a data file accessible in MM, hardcoded for now
+	MainMenu(ButtonTable);
 	EndDrawing();
       }
       else if(NewWorldNameGiven == false){
 	switch(LOADINGSAVE){
 	case false:
 	  BeginDrawing();
-	  EnterWorldName(unitTable, camera, map, itemTable, WorldName);
+	  EnterWorldName(camera, unitTable, WorldName);
 	  EndDrawing();
 	  break;
 	case true:
 	  BeginDrawing();
-	  LoadWorldSaves(unitTable, camera, map, itemTable, WorldName);
+	  LoadWorldSaves(camera, unitTable, WorldName);
 	  EndDrawing();
 	  break;
 	}
@@ -88,12 +94,12 @@ int main(void){
 	BeginDrawing();
 	switch(GamePause){
 	case false:
-	  GameLogic(unitTable, camera, map);
-	  GameDraw(unitTable, camera, map);
+	  GameLogic(unitTable, camera);
+	  GameDraw(unitTable, camera);
 	  break;
 	case true:
-	  GameDraw(unitTable, camera, map);
-	  PauseDraw(unitTable,ButtonTable,testSave,map);
+	  GameDraw(unitTable, camera);
+	  PauseDraw(unitTable, ButtonTable);
 	  break;
 	}
 	EndDrawing();
@@ -106,8 +112,7 @@ int main(void){
   return 0;
 }
 
-void MainMenu(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map, std::map<std::string,Button>* ButtonTable, std::vector<Item*>* itemTable, std::string WorldName){
-  
+void MainMenu(std::map<std::string,Button>* ButtonTable){
   // Logic
   if(ButtonTable->find("M1")->second.isMouseClick()){
     loadMainMenu = false;
@@ -115,17 +120,16 @@ void MainMenu(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map
   else if(ButtonTable->find("M2")->second.isMouseClick()){
     loadMainMenu = false;
     LOADINGSAVE = true;
-    //LoadWorldSaves(unitTable,camera,map,itemTable, WorldName);
-    //LoadMap(unitTable, camera, testSave, map, itemTable);
   }
-
   // Display Menu items
   ClearBackground(RAYWHITE);
   ButtonTable->find("M1")->second.Draw();
   ButtonTable->find("M2")->second.Draw();
 }
 
-void GameLogic(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map){
+void GameLogic(std::vector<Character*>* unitTable, Camera2D* camera){
+  DayTime.IncrementTime();
+  
   static int count = 0;
   CameraUpdate(camera,unitTable);
   for(int i = 0; i < 1; i++){
@@ -135,8 +139,9 @@ void GameLogic(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* ma
       Vector2 P2 = GetScreenToWorld2D({0,screenHeight}, *camera);
       Vector2 P3 = GetScreenToWorld2D({screenWidth,0}, *camera);
       Vector2 P4 = GetScreenToWorld2D({screenWidth,screenHeight}, *camera);
-      if( (map->GetBlock(P1) == nullptr) || (map->GetBlock(P2) == nullptr) || (map->GetBlock(P3) == nullptr) || (map->GetBlock(P4) == nullptr) ){ //Any of the four corners aren't loading blocks
-	map->UpdateChunkList(Vector2{(*unitTable)[i]->getX(),(*unitTable)[i]->getY()});
+      
+      if( ((*unitTable)[i]->GetMap()->GetBlock(P1) == nullptr) || ((*unitTable)[i]->GetMap()->GetBlock(P2) == nullptr) || ((*unitTable)[i]->GetMap()->GetBlock(P3) == nullptr) || ((*unitTable)[i]->GetMap()->GetBlock(P4) == nullptr) ){ //Any of the four corners aren't loading blocks
+	(*unitTable)[i]->GetMap()->UpdateChunkList(Vector2{(*unitTable)[i]->getX(),(*unitTable)[i]->getY()});
       }
     }
   }
@@ -147,7 +152,7 @@ void GameLogic(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* ma
   }
 }
 
-void GameDraw(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map){ 
+void GameDraw(std::vector<Character*>* unitTable, Camera2D* camera){ 
   ClearBackground(RAYWHITE);
   BeginMode2D(*camera);
 
@@ -157,47 +162,46 @@ void GameDraw(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map
   v = GetScreenToWorld2D(Vector2{screenWidth,screenHeight},*camera);
   int cxmax = v.x;
   int cymax = v.y;
+  
+  //Draw Player
+  (*unitTable)[0]->GetMap()->DrawChunkListBelow();
+  (*unitTable)[0]->draw();
+  (*unitTable)[0]->GetMap()->DrawChunkListAbove();
+  
 
-  //Draw all Units 
-  for(int i = 0; i < (int)unitTable->size();i++){
-    if((*unitTable)[i]->getX()+(*unitTable)[i]->getWidth() >= cxmin && (*unitTable)[i]->getX() <= cxmax && (*unitTable)[i]->getY()+(*unitTable)[i]->getHeight() >= cymin && (*unitTable)[i]->getY() <= cymax){
+  //Time of Day
+  float value = 100*cos(DayTime.GetTime()*M_PI*2/2399)+100;
+  Vector2 LightLevelDimension = GetScreenToWorld2D({GetScreenWidth(),GetScreenHeight()},*camera);
+  Vector2 LightLevelPosition = GetScreenToWorld2D({0,0},*camera);
+  LightLevelDimension.x = LightLevelDimension.x - LightLevelPosition.x;
+  LightLevelDimension.y = LightLevelDimension.y - LightLevelPosition.y;
+  DrawRectangleV(LightLevelPosition,LightLevelDimension,CLITERAL(Color){0,0,0,value});
+  
 
-      map->DrawChunkList();
-      (*unitTable)[i]->draw();
-    }
-  }
+  if((*unitTable)[0]->GetInventory()->IsOpen())
+    (*unitTable)[0]->GetInventory()->Draw(camera);
+  
   Vector2 tempo = GetScreenToWorld2D({5,5},*camera);
   DrawFPS(tempo.x,tempo.y);
   EndMode2D();
 }
-
-void PauseDraw(std::vector<Character*>* unitTable,std::map<std::string,Button>* ButtonTable,std::string SaveName, TileMap* map){
-  SaveName = "";
-  map->ClearMap(); //These three lines do nothing, just remove errors until saving/loading is fixed
-  (*unitTable)[0]->getX();
-
+#define Fe
+void PauseDraw(std::vector<Character*>* unitTable, std::map<std::string,Button>* ButtonTable){
   if(ButtonTable->find("P1")->second.isMouseClick()){
     GamePause = false;
   }
   else if(ButtonTable->find("P3")->second.isMouseClick()){
-    //ClearGameData(unitTable,map);
+    ClearGameData(unitTable);
     loadMainMenu = true;
     GamePause = false;
     NewWorldNameGiven = false;
     LOADINGSAVE = false;
   }
-  else if(ButtonTable->find("P2")->second.isMouseClick()){
-    //SaveData(unitTable,SaveName,map);
-  }
   ButtonTable->find("P1")->second.Draw();
-  ButtonTable->find("P2")->second.Draw();
-  ButtonTable->find("P3")->second.Draw();
-  
+  ButtonTable->find("P3")->second.Draw(); 
 }
 
-void EndScreen(){
-  //Report Final Score and redirect to Main Menu
-}
+
 
 void CameraUpdate(Camera2D* camera, std::vector<Character*>* unitTable){
   static int mx0;
@@ -226,13 +230,14 @@ void CameraUpdate(Camera2D* camera, std::vector<Character*>* unitTable){
   camera->target.y = (*unitTable)[0]->getY();
 }
 
-void initMap(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable, std::string WorldName){
+void initMap(Camera2D *camera, std::vector<Character*>*& unitTable, std::string WorldName){
+  TileMap* map = new TileMap();
+  unitTable->push_back(new Character(Rectangle{(float)0,(float)0,16,16},"Player", camera, map));
+  
   //Create UnitTable
-  //unitTable->push_back(new Character(Rectangle{(float)0,(float)0,16,16},"Player", camera, map, itemTable));
   (*unitTable)[0]->SetWorldName(WorldName);
   (*unitTable)[0]->CreateWorldSaveDir();
   (*unitTable)[0]->Reset();
-  (*unitTable)[0]->Inven->SetItemAtSlot((*itemTable)[2],0);
   
   //Setting Save file location
   map->SetWorldName(WorldName);
@@ -241,15 +246,47 @@ void initMap(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map,
   map->LoadChunkList();
 }
 
-void MakeButtons(std::map<std::string,Button>* ButtonTable){
+// All load needs to do is set the world name so that all data gets grabbed!!
+void LoadMap(Camera2D *camera, std::vector<Character*>*& unitTable, std::string WorldName){  
+  TileMap* map = new TileMap();
+  unitTable->push_back(new Character(Rectangle{(float)0,(float)0,16,16},"Player", camera, map));
+  
+  //Reset Variables
+  (*unitTable)[0]->SetWorldName(WorldName);
+  (*unitTable)[0]->Reset();
+  (*unitTable)[0]->LoadData();
+  
+  //Setting Save file location
+  map->SetWorldName(WorldName);
+  map->CreateSeed();
+  map->LoadChunkList();
+}
+
+void ClearGameData(std::vector<Character*>*& unitTable){
+  delete (*unitTable)[0]->GetMap();
+  delete (*unitTable)[0];
+  unitTable->clear();
+}
+
+void MakeButtons(std::map<std::string,Button>* ButtonTable){ //This is dumb
   ButtonTable->insert(std::pair<std::string,Button>{"M1",{"New",(float)(screenWidth/2.0-100) ,(float)(screenHeight*3/8-50.0),200,100,Vector2{0,0},0.0f}});
   ButtonTable->insert({"M2",{"Load",(float)(screenWidth/2.0-100) ,(float)(screenHeight*5/8-50.0),200,100,Vector2{0,0},0.0f}});
-  ButtonTable->insert({"P1",{"Resume",(float)(screenWidth/2.0-100) ,(float)(screenHeight*2/8-50.0),250,125,Vector2{0,0},0.0f}});
-  ButtonTable->insert({"P2",{"Save",(float)(screenWidth/2.0-100) ,(float)(screenHeight*4/8-50.0),250,125,Vector2{0,0},0.0f}});
-  ButtonTable->insert({"P3",{"Quit",(float)(screenWidth/2.0-100) ,(float)(screenHeight*6/8-50.0),250,125,Vector2{0,0},0.0f}});
+  ButtonTable->insert({"P1",{"Resume",(float)(screenWidth/2.0-100) ,(float)(screenHeight*3/8-50.0),250,125,Vector2{0,0},0.0f}});
+  ButtonTable->insert({"P3",{"Quit",(float)(screenWidth/2.0-100) ,(float)(screenHeight*5/8-50.0),250,125,Vector2{0,0},0.0f}});
 }
-void LoadWorldSaves(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable, std::string &WorldName){
+void LoadWorldSaves(Camera2D *camera, std::vector<Character*>*& unitTable, std::string &WorldName){
   ClearBackground(RAYWHITE);
+  //Draw Back Button
+  Button BackButton("X", 10, 10, 200, 100, Vector2{0,0}, 0.0f);
+  BackButton.setPrimaryColor(RED);
+  BackButton.setAccentColor(MAROON);
+  BackButton.Draw();
+  if(BackButton.isMouseClick()){
+    loadMainMenu = true;
+    NewWorldNameGiven = false;
+    LOADINGSAVE = false;
+  }
+  
   //Get a table of world save files
   std::vector<std::string> WorldFileNames;
   for( const auto & entry : std::filesystem::directory_iterator("data/worlds/")){
@@ -269,58 +306,27 @@ void LoadWorldSaves(std::vector<Character*>* unitTable, Camera2D* camera, TileMa
   }
   for(int i = 0; i < ButtonList.size(); i++){
     if(ButtonList[i].isMouseClick()){
-      LoadMap(unitTable,camera,map,itemTable,WorldFileNames[i]);
+      LoadMap(camera, unitTable, WorldFileNames[i]);
       NewWorldNameGiven = true;
     }
   }
 }
 
-// All load needs to do is set the world name so that all data gets grabbed!!
-void LoadMap(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable, std::string WorldName){
-  //Create UnitTable ATTENTION:: Instead of loading a new character this is where it should pull player data from file.
-  //unitTable->push_back(new Character(Rectangle{(float)0,(float)0,16,16},"Player", camera, map, itemTable));
-  (*unitTable)[0]->SetWorldName(WorldName);
-  (*unitTable)[0]->Reset();
-  (*unitTable)[0]->LoadData();
-  (*unitTable)[0]->Inven->SetItemAtSlot((*itemTable)[2],0);
-  
-  //Setting Save file location
-  map->SetWorldName(WorldName);
-  map->CreateSeed();
-  map->LoadChunkList();
-}
-
-void LoadItemData(std::vector<Item*>* itemTable){
-  std::cout << "Loading item data...\n";
-
-  std::string path = "data/items";
-  for( const auto & entry : std::filesystem::directory_iterator(path)){
-    //Load Texture
-    std::string ItemName;
-    std::string TexturePath;
-    float ItemDura;
-    float ItemWeight;
-
-    std::ifstream ifstream;
-    ifstream.open(entry.path());
-    getline(ifstream, ItemName);
-    getline(ifstream, TexturePath);
-    ifstream >> ItemDura >> ItemWeight;
-    ifstream.close();
-
-    Item* CurrItem = new Item(ItemName,TexturePath,ItemDura,ItemWeight);  // Needs to be deleted..
-    
-    //Add items to table
-    itemTable->push_back(CurrItem);
-    }
-  for(int i = 0; i < itemTable->size(); i++){
-    std::cout << (*itemTable)[i]->Name << std::endl;
-  }
-}
-
-void EnterWorldName(std::vector<Character*>* unitTable, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable, std::string &WorldName){
+void EnterWorldName(Camera2D *camera, std::vector<Character*>*& unitTable, std::string &WorldName){
   ClearBackground(RAYWHITE);
 
+  //Draw Back Button
+  Button BackButton("X", 10, 10, 200, 100, Vector2{0,0}, 0.0f);
+  BackButton.setPrimaryColor(RED);
+  BackButton.setAccentColor(MAROON);
+  BackButton.Draw();
+  if(BackButton.isMouseClick()){
+    WorldName = "";
+    loadMainMenu = true;
+    NewWorldNameGiven = false;
+    LOADINGSAVE = false;
+  }
+  
   //Getting Key Input 
   int key = GetKeyPressed(); //TODO: Re-Implement the max key, make sure . can't be pressed
   // Check if more characters have been pressed on the same frame
@@ -346,9 +352,12 @@ void EnterWorldName(std::vector<Character*>* unitTable, Camera2D* camera, TileMa
   
   if(IsKeyPressed(KEY_ENTER)){
     NewWorldNameGiven = true;
-    initMap(unitTable,camera,map,itemTable, WorldName);
+    initMap(camera, unitTable, WorldName);
+    WorldName = "";
   }
 
 }
 
-
+void EndScreen(){
+  //Report Final Score and redirect to Main Menu
+}

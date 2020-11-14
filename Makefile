@@ -6,7 +6,7 @@ LDFLAGS:=-L ~/raylib/src -lm -lraylib -lX11 -ldl -pthread -lstdc++fs
 CFLAGS:= -g -Wfatal-errors -pedantic -Wall -Wextra -std=c++17
 CFLAGS+= -I ./include -I ~/raylib/src
 
-SRC:=$(wildcard src/*.cpp)
+SRC:=$(wildcard src/*.cpp src/*/*.cpp)
 OBJ:=$(SRC:src/%.cpp=obj/%.o)
 INC:=$(wildcard include/*.h)
 

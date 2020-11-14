@@ -12,6 +12,8 @@
 #include "Block.h"
 #include "FastNoise.h"
 #include "Inventory.h"
+#include "daytimer.h"
+#include <math.h>
 
 typedef std::pair<int,int> Pair;
 typedef std::pair<float,Pair> pPair;
@@ -23,11 +25,10 @@ struct cell{
 
 class Character{
  private:
-  TileMap* map;
+  
   std::list<Vector2> path;
   Camera2D* camera;
- 
-  std::vector<Item*>* itemTable;
+  
   std::string WorldName;
   
   Vector2 currV;
@@ -36,8 +37,9 @@ class Character{
   
   const char * name;
 
+  static TileMap* map;
   static Vector2 mouseClickPoint;
-  static BlockType MCP_type;
+  static global_enums::OBJECTS MCP_type;
   static int numSelected;
   
   Rectangle body;
@@ -47,8 +49,9 @@ class Character{
   int y_init{GetMouseY()};
   int RelativeGridDim{4*16*(int)blockLength};
   int Direction{0}; // 0 == Right 1 == Left
+  int Strength{10};
 
-  float speed{7.5*blockLength}; //Note: unaffected by Monitor FPS since GetFrameTime() is called when moving
+  float speed{5*blockLength}; //Note: unaffected by Monitor FPS since GetFrameTime() is called when moving
   float displacement;
   float health{100};
   
@@ -59,14 +62,18 @@ class Character{
   bool markSet{false};
 
   Texture2D AvatarSkin;
+
+  Inventory* Inven;
   
  public:
-  Character(Rectangle Body, const char * name, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable);
-  Character(Rectangle Body, const char * name, Camera2D* camera, TileMap* map, std::vector<Item*>* itemTable, std::string NameArr[10]);
+  Character(Rectangle Body, const char * name, Camera2D* camera, TileMap* map);
+  Character(Rectangle Body, const char * name, Camera2D* camera, TileMap* map, std::string NameArr[10]);
   Character(){};
   ~Character();
 
-  Inventory* Inven;
+  Inventory * GetInventory();
+
+  TileMap* GetMap();
 
   int Vec2Quad(Vector2 v);
 
@@ -74,6 +81,7 @@ class Character{
   bool isDestination(int row, int col, Vector2 destin);
   bool isSelected();
   bool processSuccessor(int i, int j,int newi,int newj, std::vector<std::vector<cell>> &cellDetails,  std::vector<std::vector<bool>> &closedList, std::set<pPair> &openList, Vector2 destin, Vector2 src,int dispX,int dispY);
+  bool CanLift(Object* ObjectPtr);
 
   float computeH(int row, int col, Vector2 destin);
   float getHeight();
@@ -87,6 +95,7 @@ class Character{
   void findPath(Vector2 destin); //A* Search Algorithm
   void updateUnit(Camera2D* camera);
   void KeyPressAnalysis();
+  void PickItemUp();
   void UseActiveItem();
   void setSpeed(float newSpeed);
   void findNearestFreeBlock();

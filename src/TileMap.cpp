@@ -4,9 +4,11 @@
 #include <random>
 #include <math.h>
 
-TileMap::TileMap(std::vector<Item*>* itemTable){
-  MapNoise.SetNoiseType(FastNoise::Simplex);
-  this->itemTable = itemTable;
+#include <thread>
+
+TileMap::TileMap(){
+  TerrainNoise.SetNoiseType(FastNoise::Simplex);
+  BlueNoise.SetNoiseType(FastNoise::WhiteNoise);
 
   ChunkCount = ChunkRegWidth*ChunkRegHeight;
 
@@ -14,8 +16,25 @@ TileMap::TileMap(std::vector<Item*>* itemTable){
   ChunkList.resize(ChunkCount);
 
   Vector2 Center{0,0};
-  
+  int LowCol, UppCol, LowRow, UppRow, i{0};
   ChunkLength = 16;//ChunkList[0]->GetChunkLength();
+  LowCol = -1*(ChunkRegWidth/2);
+  UppCol = (-1*LowCol) - ((ChunkRegWidth+1)%2);
+  LowRow = -1*(ChunkRegHeight/2);
+  UppRow = (-1*LowRow) - ((ChunkRegHeight+1)%2);
+  for(int row = LowRow; row <= UppRow ; row++){
+    for(int col = LowCol; col <= UppCol; col++){
+      ChunkListCoor[i] = {Center.x + (col*ChunkLength*blockLength), Center.y + (row*ChunkLength*blockLength)};
+      i++;
+    }
+  }
+}
+
+TileMap::~TileMap(){
+  for(auto i : ChunkList){
+    delete i;
+  }
+  ChunkList.clear();
 }
 
 void TileMap::SetWorldName(std::string NewName){
@@ -35,7 +54,7 @@ void TileMap::CreateSeed(){
     float x;
     ifStream >> x;
     std::cout << "Got the seed from file: " << x <<std::endl;
-    MapNoise.SetSeed(x);
+    TerrainNoise.SetSeed(x);
   }
   else{
     GetRanSeed();
@@ -51,7 +70,7 @@ void TileMap::GetRanSeed(){
 }
 
 void TileMap::setSeed(float seed){
-  MapNoise.SetSeed(seed);
+  TerrainNoise.SetSeed(seed);
 
   //Store seed value in file
   std::ofstream ifStream;
@@ -71,7 +90,7 @@ Block* TileMap::GetBlock(Vector2 v){ //Expecting v to be actual game space coord
   return nullptr;
 }
 
-void TileMap::UpdateChunkList(Vector2 Center){ //Non-dynamic size rn
+void TileMap::UpdateChunkList(Vector2 Center){
   //Get the Coords of the Chunk
   Center = GetChunkCoor(Center);
   //Delete all old chunks (a bit wasteful rn, should only update new chunks)
@@ -92,36 +111,67 @@ void TileMap::UpdateChunkList(Vector2 Center){ //Non-dynamic size rn
   LoadChunkList();
 }
 
-void TileMap::DrawChunkList(){
+void TileMap::DrawChunkListBelow(){
   for(auto it = ChunkList.begin(); it != ChunkList.end(); ++it){
     (*it)->DrawChunk();
   }
+  for(auto it = ChunkList.begin(); it != ChunkList.end(); ++it){
+    (*it)->DrawChunkObjectsBelow();
+  }
 }
 
-
+void TileMap::DrawChunkListAbove(){
+  for(auto it = ChunkList.begin(); it != ChunkList.end(); ++it){
+    (*it)->DrawChunkObjectsAbove();
+  }
+}
 
 void TileMap::LoadChunkList(){ //First Checks for ChunkSaveFile and either loads the file or creates one
   for(int i = 0; i < ChunkCount; i++){
-    float NoiseArr[256];
+    float TerrNoiseArr[256];
+    float BlueNoiseArr[256];
     //Determine if ChunkSave exist
     if(SaveFileExist(Vector2{ChunkListCoor[i].x,ChunkListCoor[i].y})){
-      //Load the Data into NoiseArr and ShiftX/ShiftY
+      //Load the Data into TerrNoiseArr and ShiftX/ShiftY
       std::ifstream inStream;
       inStream.open(ActiveChunkPath);
-      float sx[256],sy[256];
+      //Inputting TerrNoiseValues
       for(int j = 0; j < 256; j++){
-    	inStream >> sx[j] >> sy[j] >> NoiseArr[j];
+    	inStream >> TerrNoiseArr[j];
+      }
+      for(int j = 0; j < 256; j++){
+    	inStream >> BlueNoiseArr[j];
+      }
+      ChunkList[i] = new Chunk({ChunkListCoor[i].x,ChunkListCoor[i].y}, TerrNoiseArr, BlueNoiseArr);
+      while(inStream.peek() != EOF){
+	float tx, ty;
+        int ObjectType;
+	inStream >> tx >> ty >> ObjectType;
+	switch(ObjectType){
+	case static_cast<std::underlying_type<global_enums::OBJECTS>::type>(global_enums::OBJECTS::Tree):
+	  ChunkList[i]->CreateObjectAtLocation<Tree>({tx,ty});
+	  break;
+	case static_cast<std::underlying_type<global_enums::OBJECTS>::type>(global_enums::OBJECTS::Log):
+	  ChunkList[i]->CreateObjectAtLocation<Log>({tx,ty});
+	  break;
+	  case static_cast<std::underlying_type<global_enums::OBJECTS>::type>(global_enums::OBJECTS::Stick):
+	  ChunkList[i]->CreateObjectAtLocation<Stick>({tx,ty});
+	  break;
+	default:
+	  break;
+	}
       }
       inStream.close();
-      ChunkList[i] = new Chunk({ChunkListCoor[i].x,ChunkListCoor[i].y}, NoiseArr, sx, sy, itemTable);
     }
     else{
       for(int j = 0; j < 256; j++){
 	int col = j % 16;
 	int row = (j-(j%16))/16;
-	NoiseArr[j] = GetNoise(ChunkListCoor[i].x + col*blockLength,ChunkListCoor[i].y + row*blockLength);
+	TerrNoiseArr[j] = GetNoise(ChunkListCoor[i].x + col*blockLength,ChunkListCoor[i].y + row*blockLength);
+	BlueNoiseArr[j] = BlueNoise.GetNoise(ChunkListCoor[i].x + col*blockLength,ChunkListCoor[i].y + row*blockLength);
       }
-      ChunkList[i] = new Chunk({ChunkListCoor[i].x,ChunkListCoor[i].y}, NoiseArr, itemTable);
+      ChunkList[i] =  new Chunk({ChunkListCoor[i].x,ChunkListCoor[i].y}, TerrNoiseArr, BlueNoiseArr);
+      ChunkList[i]->GenerateChunkObjects();
     }
   }
 }
@@ -130,9 +180,10 @@ void TileMap::UnloadChunkList(){ //Updates all ChunkSaveFiles and then deallocat
   for(int i = 0; i < ChunkCount; i++){
     StoreChunkData(Vector2{ChunkListCoor[i].x,ChunkListCoor[i].y});
   }
-    for(int i = 0; i < ChunkCount; i++){
-    delete ChunkList[i];
+  for(auto i : ChunkList){
+    delete i;
   }
+  //ChunkList.clear();
 }
 
 void TileMap::StoreChunkData(Vector2 Coor){ // Stores info on ActiveChunkPath
@@ -142,9 +193,20 @@ void TileMap::StoreChunkData(Vector2 Coor){ // Stores info on ActiveChunkPath
 
   for(int i = 0; i < ChunkCount; i++){
     if(ChunkListCoor[i].x == Coor.x && ChunkListCoor[i].y == Coor.y){
+      //Store all block noise values
       for(int j = 0; j < 256; j++){
 	Block* tempBlock = ChunkList[i]->GetBlockByIndex(j);
-	outStream <<  tempBlock->GetShiftX() << " " << tempBlock->GetShiftY() << " " << tempBlock->GetNoiseValue() << " ";
+	outStream <<  tempBlock->GetNoiseValue() << " ";
+      }
+      //Store all block blue noise values
+      for(int j = 0; j < 256; j++){
+	Block* tempBlock = ChunkList[i]->GetBlockByIndex(j);
+	outStream <<  tempBlock->GetBlueNoise() << " ";
+      }
+      //Store Object Positions and Types
+      for(int j = 0; j < ChunkList[i]->GetTreeListSize(); j++){
+	Object* tempV = ChunkList[i]->GetObjectByIndex(j);
+	outStream << tempV->GetPosition().x << " " << tempV->GetPosition().y << " " << static_cast<std::underlying_type<global_enums::OBJECTS>::type>(tempV->GetType()) << " ";
       }
     }
   }
@@ -182,22 +244,51 @@ void TileMap::CreateWorldSaveDir(){
   std::filesystem::create_directories(TempPath);
 }
 
-float TileMap::getSeed(){return MapNoise.GetSeed();}
-float TileMap::GetNoise(int x,int y){return MapNoise.GetNoise(x,y);}
-
+float TileMap::getSeed(){return TerrainNoise.GetSeed();}
+float TileMap::GetNoise(int x,int y){return TerrainNoise.GetNoise(x,y);}
 
 Vector2 TileMap::GetChunkCoor(Vector2 Pos){
   float x0,y0;
-  Pos.x = Pos.x+(0.5*blockLength);
-  Pos.y = Pos.y+(0.5*blockLength);
+  Pos.x = Pos.x;
+  Pos.y = Pos.y;
   
   if(Pos.x >= 0)
-    x0 = (int)Pos.x - ((int)Pos.x % (int)(ChunkLength*blockLength));
-  else
-    x0 = (int)Pos.x - ((int)(ChunkLength*blockLength) + (int)Pos.x % (int)(ChunkLength*blockLength));
+    x0 = (float)((int)Pos.x - (int)Pos.x % (int)(ChunkLength*blockLength));
+  else{
+    if(((int)Pos.x % (int)(ChunkLength*blockLength)) == 0)
+      x0 = (int)Pos.x;
+    else
+      x0 = (float)((int)Pos.x - ((int)Pos.x % (int)(ChunkLength*blockLength)) - (ChunkLength*blockLength));
+  }
   if(Pos.y >= 0)
-    y0 = (int)Pos.y - ((int)Pos.y % (int)(ChunkLength*blockLength));
-  else
-    y0 = (int)Pos.y - ((int)(ChunkLength*blockLength) + (int)Pos.y % (int)(ChunkLength*blockLength));
+    y0 = (float)((int)Pos.y - (int)Pos.y % (int)(ChunkLength*blockLength));
+  else{
+    if(((int)Pos.y % (int)(ChunkLength*blockLength)) == 0)
+      y0 = (int)Pos.y;
+    else
+      y0 = (float)((int)Pos.y - ((int)Pos.y % (int)(ChunkLength*blockLength)) - (ChunkLength*blockLength));
+  }
+  
   return {x0,y0};
+}
+
+void TileMap::CheckItemInteraction(Object* ItemPtr){
+  for(int i = 0; i < ChunkCount; i++){
+    ChunkList[i]->CheckObjectInteraction(ItemPtr);
+  }
+}
+
+Object * TileMap::CheckItemPickUp(Object * ItemPtr){
+  for(int i = 0; i < ChunkCount; i++){
+    Object * RecievedObject = ChunkList[i]->CheckObjectPickUp(ItemPtr);
+    if(RecievedObject != NULL)
+      return RecievedObject;
+  }
+  return NULL;
+}
+
+void TileMap::RemoveObjectByPointer(Object * ObjectPtr){
+  for(int i = 0; i < ChunkCount; i++){
+    ChunkList[i]->RemoveObjectByPointer(ObjectPtr);
+  }
 }
