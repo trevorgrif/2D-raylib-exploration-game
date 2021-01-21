@@ -63,11 +63,11 @@ int main(void){
   tempCam.SetCamera(camera);
 
   std::vector<Character*>* unitTable = new std::vector<Character*>; //Need to delete
-  
+
   std::map<std::string,Button>* ButtonTable = new std::map<std::string,Button>; // Need to delete
   MakeButtons(ButtonTable);
   std::string WorldName;
-  
+
   // Main game loop
   while(!WindowShouldClose())    // Detect window close button or ESC key
     {
@@ -129,7 +129,7 @@ void MainMenu(std::map<std::string,Button>* ButtonTable){
 
 void GameLogic(std::vector<Character*>* unitTable, Camera2D* camera){
   DayTime.IncrementTime();
-  
+
   static int count = 0;
   CameraUpdate(camera,unitTable);
   for(int i = 0; i < 1; i++){
@@ -139,7 +139,7 @@ void GameLogic(std::vector<Character*>* unitTable, Camera2D* camera){
       Vector2 P2 = GetScreenToWorld2D({0,screenHeight}, *camera);
       Vector2 P3 = GetScreenToWorld2D({screenWidth,0}, *camera);
       Vector2 P4 = GetScreenToWorld2D({screenWidth,screenHeight}, *camera);
-      
+
       if( ((*unitTable)[i]->GetMap()->GetBlock(P1) == nullptr) || ((*unitTable)[i]->GetMap()->GetBlock(P2) == nullptr) || ((*unitTable)[i]->GetMap()->GetBlock(P3) == nullptr) || ((*unitTable)[i]->GetMap()->GetBlock(P4) == nullptr) ){ //Any of the four corners aren't loading blocks
 	(*unitTable)[i]->GetMap()->UpdateChunkList(Vector2{(*unitTable)[i]->getX(),(*unitTable)[i]->getY()});
       }
@@ -152,7 +152,7 @@ void GameLogic(std::vector<Character*>* unitTable, Camera2D* camera){
   }
 }
 
-void GameDraw(std::vector<Character*>* unitTable, Camera2D* camera){ 
+void GameDraw(std::vector<Character*>* unitTable, Camera2D* camera){
   ClearBackground(RAYWHITE);
   BeginMode2D(*camera);
 
@@ -162,25 +162,25 @@ void GameDraw(std::vector<Character*>* unitTable, Camera2D* camera){
   v = GetScreenToWorld2D(Vector2{screenWidth,screenHeight},*camera);
   int cxmax = v.x;
   int cymax = v.y;
-  
+
   //Draw Player
   (*unitTable)[0]->GetMap()->DrawChunkListBelow();
   (*unitTable)[0]->draw();
   (*unitTable)[0]->GetMap()->DrawChunkListAbove();
-  
+
 
   //Time of Day
-  float value = 100*cos(DayTime.GetTime()*M_PI*2/2399)+100;
+  float value = 100*cos(DayTime.GetTime()*PI*2/2399)+100;
   Vector2 LightLevelDimension = GetScreenToWorld2D({GetScreenWidth(),GetScreenHeight()},*camera);
   Vector2 LightLevelPosition = GetScreenToWorld2D({0,0},*camera);
   LightLevelDimension.x = LightLevelDimension.x - LightLevelPosition.x;
   LightLevelDimension.y = LightLevelDimension.y - LightLevelPosition.y;
   DrawRectangleV(LightLevelPosition,LightLevelDimension,CLITERAL(Color){0,0,0,value});
-  
+
 
   if((*unitTable)[0]->GetInventory()->IsOpen())
     (*unitTable)[0]->GetInventory()->Draw(camera);
-  
+
   Vector2 tempo = GetScreenToWorld2D({5,5},*camera);
   DrawFPS(tempo.x,tempo.y);
   EndMode2D();
@@ -198,7 +198,7 @@ void PauseDraw(std::vector<Character*>* unitTable, std::map<std::string,Button>*
     LOADINGSAVE = false;
   }
   ButtonTable->find("P1")->second.Draw();
-  ButtonTable->find("P3")->second.Draw(); 
+  ButtonTable->find("P3")->second.Draw();
 }
 
 
@@ -212,7 +212,7 @@ void CameraUpdate(Camera2D* camera, std::vector<Character*>* unitTable){
   else if (camera->zoom < 0.1f) camera->zoom = 0.1f;
 
   //Drag Setting, if right click pressed mark initial point, get new mouse position, compute change in x and y
-  if(IsMouseButtonDown(MOUSE_RIGHT_BUTTON)){ 
+  if(IsMouseButtonDown(MOUSE_RIGHT_BUTTON)){
     if(IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)){
       mx0 = GetMouseX();
       my0 = GetMouseY();
@@ -233,12 +233,12 @@ void CameraUpdate(Camera2D* camera, std::vector<Character*>* unitTable){
 void initMap(Camera2D *camera, std::vector<Character*>*& unitTable, std::string WorldName){
   TileMap* map = new TileMap();
   unitTable->push_back(new Character(Rectangle{(float)0,(float)0,16,16},"Player", camera, map));
-  
+
   //Create UnitTable
   (*unitTable)[0]->SetWorldName(WorldName);
   (*unitTable)[0]->CreateWorldSaveDir();
   (*unitTable)[0]->Reset();
-  
+
   //Setting Save file location
   map->SetWorldName(WorldName);
   map->CreateWorldSaveDir();
@@ -247,15 +247,15 @@ void initMap(Camera2D *camera, std::vector<Character*>*& unitTable, std::string 
 }
 
 // All load needs to do is set the world name so that all data gets grabbed!!
-void LoadMap(Camera2D *camera, std::vector<Character*>*& unitTable, std::string WorldName){  
+void LoadMap(Camera2D *camera, std::vector<Character*>*& unitTable, std::string WorldName){
   TileMap* map = new TileMap();
   unitTable->push_back(new Character(Rectangle{(float)0,(float)0,16,16},"Player", camera, map));
-  
+
   //Reset Variables
   (*unitTable)[0]->SetWorldName(WorldName);
   (*unitTable)[0]->Reset();
   (*unitTable)[0]->LoadData();
-  
+
   //Setting Save file location
   map->SetWorldName(WorldName);
   map->CreateSeed();
@@ -286,15 +286,15 @@ void LoadWorldSaves(Camera2D *camera, std::vector<Character*>*& unitTable, std::
     NewWorldNameGiven = false;
     LOADINGSAVE = false;
   }
-  
+
   //Get a table of world save files
   std::vector<std::string> WorldFileNames;
   for( const auto & entry : std::filesystem::directory_iterator("data/worlds/")){
-    std::string temp = entry.path();
+    std::string temp = entry.path().string();
     temp.erase(0,12);
     WorldFileNames.push_back(temp);
   }
-  
+
   //Make a Button for each WorldSaveFile
   std::vector<Button> ButtonList;
   for(int i = 0; i < WorldFileNames.size(); i++){
@@ -326,8 +326,8 @@ void EnterWorldName(Camera2D *camera, std::vector<Character*>*& unitTable, std::
     NewWorldNameGiven = false;
     LOADINGSAVE = false;
   }
-  
-  //Getting Key Input 
+
+  //Getting Key Input
   int key = GetKeyPressed(); //TODO: Re-Implement the max key, make sure . can't be pressed
   // Check if more characters have been pressed on the same frame
   while (key > 0){
@@ -349,7 +349,7 @@ void EnterWorldName(Camera2D *camera, std::vector<Character*>*& unitTable, std::
   DrawTextRec(GetFontDefault(), "then press ENTER", Instruct2, 30.0f,1.0f, true, BLACK);
   DrawRectangleLinesEx(TextBox, 3,BLACK);
   DrawTextRec(GetFontDefault(), WorldName.c_str(), Text, 40.0f,1.0f,true, BLACK);
-  
+
   if(IsKeyPressed(KEY_ENTER)){
     NewWorldNameGiven = true;
     initMap(camera, unitTable, WorldName);

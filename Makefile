@@ -1,12 +1,11 @@
+APPNAME=run
 
-APPNAME:=$(shell basename `pwd`)
+LDFLAGS:=-static -L C:/raylib/src -lm -lraylib  -pthread -lopengl32 -lgdi32 -lwinmm -lstdc++
 
-LDFLAGS:=-L ~/raylib/src -lm -lraylib -lX11 -ldl -pthread -lstdc++fs
+CFLAGS:= -g -Wfatal-errors -pedantic -Wall -Wextra
+CFLAGS+= -std=c++17 -I ./include -I C:/raylib/src
 
-CFLAGS:= -g -Wfatal-errors -pedantic -Wall -Wextra -std=c++17
-CFLAGS+= -I ./include -I ~/raylib/src
-
-SRC:=$(wildcard src/*.cpp src/*/*.cpp)
+SRC:=$(wildcard src/*.cpp)
 OBJ:=$(SRC:src/%.cpp=obj/%.o)
 INC:=$(wildcard include/*.h)
 
@@ -26,7 +25,7 @@ debug release: clean $(APPNAME)
 
 .PHONY:	clean
 clean:
-	rm obj/* -f
+	rm obj\* -f
 	rm $(APPNAME) -f
 
 style: $(SRC) $(INC)
